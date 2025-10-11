@@ -509,7 +509,7 @@ body {
     height: 100vh;
     height: 100dvh;
     min-height: 100vh;
-    padding: clamp(48px, 12vh, 96px) clamp(20px, 8vw, 32px);
+    padding: clamp(48px, 12vh, 96px) 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -533,11 +533,11 @@ body {
   .hero__content {
     position: relative;
     inset: auto;
-    padding: 0;
+    padding: 0 clamp(20px, 8vw, 32px);
     margin: 0;
     align-items: center;
     text-align: center;
-    width: min(520px, 90vw);
+    width: min(520px, 100vw);
     max-width: 520px;
     transform: none;
   }
@@ -624,8 +624,8 @@ body {
   }
 
   .hero__content {
-    width: min(520px, 96vw);
-    padding: 0;
+    width: min(520px, 100vw);
+    padding: 0 clamp(16px, 6vw, 24px);
     align-items: center;
     text-align: center;
     transform: none;
