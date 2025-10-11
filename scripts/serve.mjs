@@ -1,10 +1,24 @@
 #!/usr/bin/env node
 import http from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { access, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
+const cwd = process.cwd();
+const argRoot = process.argv[2];
 const port = Number(process.env.PORT ?? 5173);
-const root = path.resolve(process.cwd(), process.argv[2] ?? '.');
+
+async function pathExists(target) {
+  try {
+    await access(target);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Auto-détection du dossier à servir : ./src si index.html existe, sinon .
+const detectedRoot = (await pathExists(path.join(cwd, 'src', 'index.html'))) ? 'src' : '.';
+const root = path.resolve(cwd, argRoot ?? detectedRoot);
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -16,30 +30,46 @@ const mimeTypes = {
   '.jpeg': 'image/jpeg',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
+  '.webp': 'image/webp',
+  '.woff2': 'font/woff2',
+  '.woff': 'font/woff',
+  '.ttf': 'font/ttf',
 };
 
-function sanitizePath(requestPath) {
-  const pathname = decodeURIComponent(requestPath.split('?')[0]);
-  const normalized = path.normalize(pathname).replace(/^\/+/, '');
-  return path.join(root, normalized);
+function normalizeRequestUrl(requestUrl = '/') {
+  const [pathname] = requestUrl.split('?');
+  return decodeURIComponent(pathname);
 }
 
-async function resolveFile(requestPath) {
-  let target = sanitizePath(requestPath);
-  if (!target.startsWith(root)) {
+function buildFilePath(requestUrl) {
+  const pathname = normalizeRequestUrl(requestUrl);
+  const relativePath = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
+  const resolved = path.resolve(root, relativePath);
+
+  // Sécurité : pas de sortie du dossier servi
+  const traversal = path.relative(root, resolved);
+  if (traversal.startsWith('..') || path.isAbsolute(traversal)) {
     const error = new Error('Forbidden');
+    // @ts-ignore
     error.code = 'EACCES';
     throw error;
   }
 
+  return resolved;
+}
+
+async function resolveFile(requestUrl) {
+  const candidate = buildFilePath(requestUrl);
   try {
-    const fileStat = await stat(target);
-    if (fileStat.isDirectory()) {
-      target = path.join(target, 'index.html');
-      await stat(target);
+    const stats = await stat(candidate);
+    if (stats.isDirectory()) {
+      const indexPath = path.join(candidate, 'index.html');
+      await stat(indexPath);
+      return indexPath;
     }
-    return target;
+    return candidate;
   } catch (error) {
+    // Fallback SPA : renvoyer index.html si le fichier demandé n'existe pas
     if (error.code === 'ENOENT') {
       const fallback = path.join(root, 'index.html');
       await stat(fallback);
@@ -55,17 +85,4 @@ const server = http.createServer(async (req, res) => {
     const data = await readFile(filePath);
     const ext = path.extname(filePath).toLowerCase();
     const contentType = mimeTypes[ext] ?? 'application/octet-stream';
-    res.writeHead(200, { 'Content-Type': contentType });
-    res.end(data);
-  } catch (error) {
-    const status = error.code === 'ENOENT' ? 404 : error.code === 'EACCES' ? 403 : 500;
-    const message =
-      status === 404 ? 'Not Found' : status === 403 ? 'Forbidden' : 'Server Error';
-    res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end(`${message}: ${error.message}`);
-  }
-});
-
-server.listen(port, () => {
-  console.log(`Static server running at http://localhost:${port} (serving ${root})`);
-});
+    res.writeHead(200, { 'Content-Type': contentType
