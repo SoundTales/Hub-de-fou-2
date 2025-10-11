@@ -408,6 +408,27 @@ main
   }
 }
 
+@media (min-width: 768px) and (orientation: landscape) {
+  .hero {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .hero__content {
+    position: relative;
+    inset: auto;
+    margin-left: clamp(48px, 7vw, 120px);
+    margin-right: auto;
+    padding: clamp(72px, 10vh, 128px) 0;
+    width: min(520px, 46vw);
+    max-width: 540px;
+    align-items: flex-start;
+    text-align: left;
+    transform: none;
+  }
+}
+
 @media (max-width: 900px) and (orientation: landscape) {
   .hero {
     height: 50vh;
@@ -483,8 +504,14 @@ main
 
 @media (orientation: portrait) {
   .hero {
-    height: 33vh;
-    min-height: 260px;
+    position: relative;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 100vh;
+    padding: clamp(48px, 12vh, 96px) clamp(20px, 8vw, 32px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     --hero-content-gap: 18px;
     --hero-tag-gap: 10px;
     --hero-tag-font: 0.84rem;
@@ -503,15 +530,15 @@ main
   }
 
   .hero__content {
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    padding: 48px 0 44px;
+    position: relative;
+    inset: auto;
+    padding: 0;
+    margin: 0;
     align-items: center;
     text-align: center;
-    width: min(520px, 92vw);
+    width: min(520px, 90vw);
     max-width: 520px;
-    transform: translateX(-50%);
+    transform: none;
   }
 
   .hero__eyebrow {
@@ -596,12 +623,11 @@ main
   }
 
   .hero__content {
-    left: 50%;
-    padding: 44px 0 40px;
     width: min(520px, 96vw);
+    padding: 0;
     align-items: center;
     text-align: center;
-    transform: translateX(-50%);
+    transform: none;
   }
 
   .hero__eyebrow {
