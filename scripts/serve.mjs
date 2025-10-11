@@ -16,6 +16,7 @@ async function pathExists(target) {
   }
 }
 
+// Auto-détection du dossier à servir : ./src si index.html existe, sinon .
 const detectedRoot = (await pathExists(path.join(cwd, 'src', 'index.html'))) ? 'src' : '.';
 const root = path.resolve(cwd, argRoot ?? detectedRoot);
 
@@ -45,9 +46,11 @@ function buildFilePath(requestUrl) {
   const relativePath = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
   const resolved = path.resolve(root, relativePath);
 
+  // Sécurité : pas de sortie du dossier servi
   const traversal = path.relative(root, resolved);
   if (traversal.startsWith('..') || path.isAbsolute(traversal)) {
     const error = new Error('Forbidden');
+    // @ts-ignore
     error.code = 'EACCES';
     throw error;
   }
@@ -66,10 +69,11 @@ async function resolveFile(requestUrl) {
     }
     return candidate;
   } catch (error) {
+    // Fallback SPA : renvoyer index.html si le fichier demandé n'existe pas
     if (error.code === 'ENOENT') {
-      const notFound = new Error(`File not found: ${requestUrl}`);
-      notFound.code = 'ENOENT';
-      throw notFound;
+      const fallback = path.join(root, 'index.html');
+      await stat(fallback);
+      return fallback;
     }
     throw error;
   }
@@ -81,18 +85,4 @@ const server = http.createServer(async (req, res) => {
     const data = await readFile(filePath);
     const ext = path.extname(filePath).toLowerCase();
     const contentType = mimeTypes[ext] ?? 'application/octet-stream';
-    res.writeHead(200, { 'Content-Type': contentType });
-    res.end(data);
-  } catch (error) {
-    const status = error.code === 'ENOENT' ? 404 : error.code === 'EACCES' ? 403 : 500;
-    const message =
-      status === 404 ? 'Not Found' : status === 403 ? 'Forbidden' : 'Server Error';
-    res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end(`${message}: ${error.message}`);
-  }
-});
-
-server.listen(port, () => {
-  const relativeRoot = path.relative(cwd, root) || '.';
-  console.log(`Static server running at http://localhost:${port} (serving ${relativeRoot})`);
-});
+    res.writeHead(200, { 'Content-Type': contentType
