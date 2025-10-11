@@ -4,7 +4,16 @@ import path from 'node:path';
 
 const root = path.resolve(process.cwd(), process.argv[2] ?? '.');
 const ignore = new Set(['node_modules', '.git', 'dist', '.vite']);
+codex/create-react-front-to-replicate-image-3eehxz
+const markerStart = '<'.repeat(7);
+const markerMid = '='.repeat(7);
+const markerEnd = '>'.repeat(7);
+const conflictPattern = new RegExp(
+  String.raw`(?:^|\n)(?:${markerStart} .+|${markerMid}|${markerEnd} .+)`,
+);
+
 const conflictPattern = /(?:^|\n)(?:<<<<<<< .+|=======|>>>>>>> .+)/;
+main
 
 async function* walk(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
