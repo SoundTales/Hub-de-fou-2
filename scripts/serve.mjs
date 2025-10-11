@@ -4,7 +4,7 @@ import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 const port = Number(process.env.PORT ?? 5173);
-const root = path.resolve(process.cwd(), process.argv[2] ?? '.');
+const root = path.resolve(process.cwd(), process.argv[2] ?? 'src');
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',

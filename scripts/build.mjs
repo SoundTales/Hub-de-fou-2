@@ -3,6 +3,7 @@ import { cp, mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 
 const root = process.cwd();
+const sourceDir = path.join(root, 'src');
 const distDir = path.join(root, 'dist');
 const assets = ['index.html', 'styles.css'];
 
@@ -11,7 +12,7 @@ await mkdir(distDir, { recursive: true });
 
 await Promise.all(
   assets.map(async (file) => {
-    const source = path.join(root, file);
+    const source = path.join(sourceDir, file);
     const destination = path.join(distDir, file);
     await cp(source, destination);
   }),
