@@ -39,6 +39,21 @@ body {
   background: url('https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=1600&q=80')
       center/cover no-repeat;
   margin: 0;
+  --hero-content-gap: 18px;
+  --hero-tag-gap: 12px;
+  --hero-tag-font: 0.86rem;
+  --hero-tag-pad-y: 10px;
+  --hero-tag-pad-x: 22px;
+  --hero-meta-margin: 6px;
+  --hero-actions-gap: 18px;
+  --hero-actions-margin: 26px;
+  --hero-cta-pad-y: 18px;
+  --hero-cta-pad-x: 74px;
+  --hero-cta-font: 0.94rem;
+  --hero-bookmark-size: 64px;
+  --hero-bookmark-icon-width: 20px;
+  --hero-bookmark-icon-height: 28px;
+  --hero-bookmark-padding: 6px;
 }
 
 .hero::after {
@@ -72,13 +87,14 @@ body {
   justify-content: center;
   align-items: flex-start;
   text-align: left;
-  gap: 18px;
+  gap: var(--hero-content-gap);
   width: min(460px, 44vw);
   max-width: clamp(320px, 44vw, 500px);
   margin: 0;
   z-index: 2;
   transition: padding 0.45s ease, max-width 0.45s ease, align-items 0.45s ease,
-    text-align 0.45s ease, left 0.45s ease, width 0.45s ease;
+    text-align 0.45s ease, left 0.45s ease, width 0.45s ease,
+    gap 0.45s ease;
 }
 
 .hero__eyebrow {
@@ -124,8 +140,8 @@ body {
 
 .hero__meta {
   display: inline-flex;
-  gap: 12px;
-  margin-top: 6px;
+  gap: var(--hero-tag-gap);
+  margin-top: var(--hero-meta-margin);
   flex-wrap: wrap;
   justify-content: flex-start;
 }
@@ -134,8 +150,8 @@ body {
   background: #3b3b3b;
   color: #fefff4;
   border-radius: 999px;
-  padding: 10px 22px;
-  font-size: 0.86rem;
+  padding: var(--hero-tag-pad-y) var(--hero-tag-pad-x);
+  font-size: var(--hero-tag-font);
   letter-spacing: 0.08em;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.45);
 }
@@ -151,17 +167,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 18px;
-  margin-top: 26px;
+  gap: var(--hero-actions-gap);
+  margin-top: var(--hero-actions-margin);
 }
 
 .hero__cta {
   position: relative;
-  padding: 18px 74px;
+  padding: var(--hero-cta-pad-y) var(--hero-cta-pad-x);
   border: none;
   font-weight: 700;
   letter-spacing: 0.34em;
-  font-size: 0.94rem;
+  font-size: var(--hero-cta-font);
   text-transform: uppercase;
   background: #f5ff85;
   color: #1f2023;
@@ -178,12 +194,12 @@ body {
 
 .hero__bookmark {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: var(--hero-bookmark-size);
+  height: var(--hero-bookmark-size);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding-left: 6px;
+  padding-left: var(--hero-bookmark-padding);
   border: 3px solid #fefff4;
   background: #1f2023;
   cursor: pointer;
@@ -205,8 +221,8 @@ body {
 }
 
 .hero__bookmark-icon {
-  width: 20px;
-  height: 28px;
+  width: var(--hero-bookmark-icon-width);
+  height: var(--hero-bookmark-icon-height);
   background: #fefff4;
   display: block;
   clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
@@ -335,6 +351,17 @@ body {
   .hero {
     height: 50vh;
     min-height: 320px;
+    --hero-actions-gap: 14px;
+    --hero-actions-margin: 24px;
+    --hero-cta-pad-y: 16px;
+    --hero-cta-pad-x: 60px;
+    --hero-bookmark-size: 38px;
+    --hero-bookmark-icon-width: 12px;
+    --hero-bookmark-icon-height: 17px;
+    --hero-bookmark-padding: 4px;
+    --hero-tag-font: 0.77rem;
+    --hero-tag-pad-y: 9px;
+    --hero-tag-pad-x: 20px;
   }
 
   .hero__content {
@@ -344,15 +371,6 @@ body {
 
   .hero__eyebrow {
     font-size: 0.86rem;
-  }
-
-  .hero__actions {
-    margin-top: 24px;
-    gap: 14px;
-  }
-
-  .hero__cta {
-    padding: 14px 60px;
   }
 
   .gallery {
@@ -367,12 +385,24 @@ body {
   .hero {
     height: 50vh;
     min-height: 320px;
+    --hero-content-gap: 16px;
+    --hero-cta-pad-y: 13px;
+    --hero-cta-pad-x: 56px;
+    --hero-cta-font: 0.88rem;
+    --hero-bookmark-size: 36px;
+    --hero-bookmark-icon-width: 11px;
+    --hero-bookmark-icon-height: 16px;
+    --hero-bookmark-padding: 4px;
+    --hero-tag-font: 0.74rem;
+    --hero-tag-pad-y: 8px;
+    --hero-tag-pad-x: 18px;
+    --hero-actions-gap: 14px;
+    --hero-actions-margin: 22px;
   }
 
   .hero__content {
     padding: 52px 0;
     max-width: 420px;
-    gap: 16px;
   }
 
   .hero__title {
@@ -380,15 +410,7 @@ body {
   }
 
   .hero__cta {
-    padding: 14px 56px;
     letter-spacing: 0.3em;
-    font-size: 0.88rem;
-  }
-
-  .hero__bookmark {
-    width: 58px;
-    height: 58px;
-    padding-left: 4px;
   }
 
   .gallery {
@@ -436,6 +458,21 @@ body {
   .hero {
     height: 33vh;
     min-height: 260px;
+    --hero-content-gap: 18px;
+    --hero-tag-gap: 10px;
+    --hero-tag-font: 0.84rem;
+    --hero-tag-pad-y: 9px;
+    --hero-tag-pad-x: 22px;
+    --hero-meta-margin: 6px;
+    --hero-actions-gap: 16px;
+    --hero-actions-margin: 24px;
+    --hero-cta-pad-y: 14px;
+    --hero-cta-pad-x: 52px;
+    --hero-cta-font: 0.88rem;
+    --hero-bookmark-size: 56px;
+    --hero-bookmark-icon-width: 18px;
+    --hero-bookmark-icon-height: 24px;
+    --hero-bookmark-padding: 4px;
   }
 
   .hero__content {
@@ -447,7 +484,6 @@ body {
     text-align: center;
     width: min(520px, 92vw);
     max-width: 520px;
-    gap: 18px;
     transform: translateX(-50%);
   }
 
@@ -463,25 +499,15 @@ body {
 
   .hero__cta {
     align-self: center;
-    padding: 14px 52px;
-    font-size: 0.88rem;
     letter-spacing: 0.28em;
   }
 
   .hero__meta {
     justify-content: center;
-    margin-top: 6px;
   }
 
   .hero__actions {
     justify-content: center;
-    margin-top: 24px;
-  }
-
-  .hero__bookmark {
-    width: 56px;
-    height: 56px;
-    padding-left: 4px;
   }
 
   .gallery {
@@ -526,6 +552,22 @@ body {
 }
 
 @media (max-width: 520px) {
+  .hero {
+    --hero-content-gap: 16px;
+    --hero-tag-font: 0.8rem;
+    --hero-tag-pad-y: 8px;
+    --hero-tag-pad-x: 18px;
+    --hero-cta-pad-y: 13px;
+    --hero-cta-pad-x: 40px;
+    --hero-cta-font: 0.84rem;
+    --hero-bookmark-size: 52px;
+    --hero-bookmark-icon-width: 16px;
+    --hero-bookmark-icon-height: 22px;
+    --hero-bookmark-padding: 4px;
+    --hero-actions-gap: 14px;
+    --hero-actions-margin: 22px;
+  }
+
   .hero__content {
     left: 50%;
     padding: 44px 0 40px;
@@ -544,15 +586,8 @@ body {
   }
 
   .hero__cta {
-    padding: 14px 34px;
     letter-spacing: 0.26em;
     align-self: center;
-  }
-
-  .hero__bookmark {
-    width: 52px;
-    height: 52px;
-    padding-left: 4px;
   }
 
   .hero__meta {
