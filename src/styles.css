@@ -174,7 +174,10 @@ body {
   padding: var(--hero-tag-pad-y) var(--hero-tag-pad-x);
   font-size: var(--hero-tag-font);
   letter-spacing: 0.08em;
+codex/create-react-front-to-replicate-image-3eehxz
   box-shadow: none;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.45);
+main
 }
 
 .hero__tag--age {

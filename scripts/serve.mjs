@@ -16,6 +16,9 @@ async function pathExists(target) {
   }
 }
 
+codex/create-react-front-to-replicate-image-3eehxz
+// Auto-détection du dossier à servir : ./src si index.html existe, sinon .
+main
 const detectedRoot = (await pathExists(path.join(cwd, 'src', 'index.html'))) ? 'src' : '.';
 const root = path.resolve(cwd, argRoot ?? detectedRoot);
 
@@ -45,9 +48,17 @@ function buildFilePath(requestUrl) {
   const relativePath = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
   const resolved = path.resolve(root, relativePath);
 
+codex/create-react-front-to-replicate-image-3eehxz
   const traversal = path.relative(root, resolved);
   if (traversal.startsWith('..') || path.isAbsolute(traversal)) {
     const error = new Error('Forbidden');
+=======
+  // Sécurité : pas de sortie du dossier servi
+  const traversal = path.relative(root, resolved);
+  if (traversal.startsWith('..') || path.isAbsolute(traversal)) {
+    const error = new Error('Forbidden');
+    // @ts-ignore
+main
     error.code = 'EACCES';
     throw error;
   }
@@ -66,10 +77,18 @@ async function resolveFile(requestUrl) {
     }
     return candidate;
   } catch (error) {
+codex/create-react-front-to-replicate-image-3eehxz
     if (error.code === 'ENOENT') {
       const notFound = new Error(`File not found: ${requestUrl}`);
       notFound.code = 'ENOENT';
       throw notFound;
+=======
+    // Fallback SPA : renvoyer index.html si le fichier demandé n'existe pas
+    if (error.code === 'ENOENT') {
+      const fallback = path.join(root, 'index.html');
+      await stat(fallback);
+      return fallback;
+main
     }
     throw error;
   }
@@ -81,6 +100,7 @@ const server = http.createServer(async (req, res) => {
     const data = await readFile(filePath);
     const ext = path.extname(filePath).toLowerCase();
     const contentType = mimeTypes[ext] ?? 'application/octet-stream';
+codex/create-react-front-to-replicate-image-3eehxz
     res.writeHead(200, { 'Content-Type': contentType });
     res.end(data);
   } catch (error) {
@@ -96,3 +116,5 @@ server.listen(port, () => {
   const relativeRoot = path.relative(cwd, root) || '.';
   console.log(`Static server running at http://localhost:${port} (serving ${relativeRoot})`);
 });
+    res.writeHead(200, { 'Content-Type': contentType
+main
