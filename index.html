@@ -252,5 +252,33 @@
         </article>
       </main>
     </div>
+    <script>
+      (() => {
+        const hero = document.querySelector('.hero');
+        if (!hero) return;
+
+        const THRESHOLD = 360;
+        let frame = null;
+        let lastT = -1;
+
+        const update = () => {
+          frame = null;
+          const scroll = window.scrollY || window.pageYOffset || 0;
+          const t = Math.min(1, Math.max(0, scroll / THRESHOLD));
+          if (Math.abs(t - lastT) > 0.001) {
+            hero.style.setProperty('--hero-t', t.toFixed(4));
+            lastT = t;
+          }
+        };
+
+        const onScroll = () => {
+          if (frame !== null) return;
+          frame = requestAnimationFrame(update);
+        };
+
+        window.addEventListener('scroll', onScroll, { passive: true });
+        update();
+      })();
+    </script>
   </body>
 </html>

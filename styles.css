@@ -29,16 +29,15 @@ body {
 }
 
 .hero {
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 5;
   width: 100%;
   max-width: none;
-  height: 50vh;
-  min-height: 360px;
   border-radius: 0;
   overflow: hidden;
-  background: url('https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=1600&q=80')
-      center/cover no-repeat;
   margin: 0;
+  --hero-t: 0;
   --hero-content-gap: 18px;
   --hero-tag-gap: 12px;
   --hero-tag-font: 0.86rem;
@@ -54,6 +53,24 @@ body {
   --hero-bookmark-icon-width: 20px;
   --hero-bookmark-icon-height: 28px;
   --hero-bookmark-padding: 6px;
+  height: calc(min(72vh, 820px) - (min(72vh, 820px) - 22vh) * var(--hero-t));
+  min-height: 0;
+  background: none;
+  will-change: height;
+  transition: none;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=1600&q=80')
+      center/cover no-repeat;
+  transform: scaleY(calc(1 - 0.25 * var(--hero-t)));
+  transform-origin: center top;
+  will-change: transform;
+  transition: none;
+  z-index: 0;
 }
 
 .hero::after {
@@ -81,20 +98,18 @@ body {
   top: 0;
   bottom: 0;
   left: clamp(48px, 7vw, 120px);
-  padding: 72px 0;
+  padding: calc(72px - 32px * var(--hero-t)) 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
   text-align: left;
-  gap: var(--hero-content-gap);
+  gap: calc(var(--hero-content-gap) - 6px * var(--hero-t));
   width: min(460px, 44vw);
   max-width: clamp(320px, 44vw, 500px);
   margin: 0;
   z-index: 2;
-  transition: padding 0.45s ease, max-width 0.45s ease, align-items 0.45s ease,
-    text-align 0.45s ease, left 0.45s ease, width 0.45s ease,
-    gap 0.45s ease;
+  transition: none;
 }
 
 .hero__eyebrow {
@@ -111,6 +126,11 @@ body {
   color: rgba(245, 255, 133, 0.86);
   font-variant: small-caps;
   text-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+  opacity: calc(1 - var(--hero-t));
+  max-height: calc((1 - var(--hero-t)) * 160px);
+  overflow: hidden;
+  pointer-events: none;
+  will-change: opacity;
 }
 
 .hero__eyebrow-primary,
@@ -129,21 +149,22 @@ body {
   line-height: 1.02;
   text-transform: uppercase;
   text-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
-}
-
-.hero__meta,
-.hero__actions,
-.hero__cta {
-  transition: margin 0.35s ease, gap 0.35s ease, padding 0.35s ease,
-    clip-path 0.35s ease;
+  transform: translateY(calc(-12px * var(--hero-t))) scale(calc(1 - 0.05 * var(--hero-t)));
+  transform-origin: left center;
+  will-change: transform;
 }
 
 .hero__meta {
   display: inline-flex;
   gap: var(--hero-tag-gap);
-  margin-top: var(--hero-meta-margin);
+  margin-top: calc(var(--hero-meta-margin) * (1 - var(--hero-t)));
   flex-wrap: wrap;
   justify-content: flex-start;
+  opacity: calc(1 - var(--hero-t));
+  max-height: calc((1 - var(--hero-t)) * 140px);
+  overflow: hidden;
+  pointer-events: none;
+  will-change: opacity;
 }
 
 .hero__tag {
@@ -168,7 +189,10 @@ body {
   align-items: center;
   justify-content: flex-start;
   gap: var(--hero-actions-gap);
-  margin-top: var(--hero-actions-margin);
+  margin-top: calc(var(--hero-actions-margin) * (1 - 0.55 * var(--hero-t)));
+  transform: translateY(calc(-12px * var(--hero-t))) scale(calc(1 - 0.05 * var(--hero-t)));
+  transform-origin: left center;
+  will-change: transform;
 }
 
 .hero__cta {
