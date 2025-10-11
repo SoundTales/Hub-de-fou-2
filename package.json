@@ -4,10 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node serve.mjs",
-    "build": "node build.mjs",
-    "preview": "node serve.mjs dist",
-    "lint:conflicts": "node check-conflicts.mjs"
+    "dev": "node scripts/serve.mjs",
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/serve.mjs dist",
+    "lint:conflicts": "node scripts/check-conflicts.mjs"
   },
   "dependencies": {},
   "devDependencies": {}
