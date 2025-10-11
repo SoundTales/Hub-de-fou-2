@@ -49,7 +49,7 @@ body {
   --hero-cta-pad-y: 18px;
   --hero-cta-pad-x: 74px;
   --hero-cta-font: 0.94rem;
-  --hero-bookmark-size: 64px;
+  --hero-bookmark-size: calc((2 * var(--hero-cta-pad-y)) + (1.4 * var(--hero-cta-font)));
   --hero-bookmark-icon-width: 20px;
   --hero-bookmark-icon-height: 28px;
   --hero-bookmark-padding: 6px;
@@ -168,16 +168,17 @@ body {
 }
 
 .hero__tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   background: #3b3b3b;
   color: #fefff4;
   border-radius: 999px;
   padding: var(--hero-tag-pad-y) var(--hero-tag-pad-x);
   font-size: var(--hero-tag-font);
   letter-spacing: 0.08em;
-codex/create-react-front-to-replicate-image-3eehxz
   box-shadow: none;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.45);
-main
 }
 
 .hero__tag--age {
@@ -382,7 +383,7 @@ main
     --hero-actions-margin: 24px;
     --hero-cta-pad-y: 16px;
     --hero-cta-pad-x: 60px;
-    --hero-bookmark-size: 38px;
+    --hero-bookmark-size: calc((2 * var(--hero-cta-pad-y)) + (1.3 * var(--hero-cta-font)));
     --hero-bookmark-icon-width: 12px;
     --hero-bookmark-icon-height: 17px;
     --hero-bookmark-padding: 4px;
@@ -437,7 +438,7 @@ main
     --hero-cta-pad-y: 13px;
     --hero-cta-pad-x: 56px;
     --hero-cta-font: 0.88rem;
-    --hero-bookmark-size: 36px;
+    --hero-bookmark-size: calc((2 * var(--hero-cta-pad-y)) + (1.3 * var(--hero-cta-font)));
     --hero-bookmark-icon-width: 11px;
     --hero-bookmark-icon-height: 16px;
     --hero-bookmark-padding: 4px;
@@ -523,7 +524,7 @@ main
     --hero-cta-pad-y: 14px;
     --hero-cta-pad-x: 52px;
     --hero-cta-font: 0.88rem;
-    --hero-bookmark-size: 56px;
+    --hero-bookmark-size: calc((2 * var(--hero-cta-pad-y)) + (1.35 * var(--hero-cta-font)));
     --hero-bookmark-icon-width: 18px;
     --hero-bookmark-icon-height: 24px;
     --hero-bookmark-padding: 4px;
@@ -614,7 +615,7 @@ main
     --hero-cta-pad-y: 13px;
     --hero-cta-pad-x: 40px;
     --hero-cta-font: 0.84rem;
-    --hero-bookmark-size: 52px;
+    --hero-bookmark-size: calc((2 * var(--hero-cta-pad-y)) + (1.35 * var(--hero-cta-font)));
     --hero-bookmark-icon-width: 16px;
     --hero-bookmark-icon-height: 22px;
     --hero-bookmark-padding: 4px;
