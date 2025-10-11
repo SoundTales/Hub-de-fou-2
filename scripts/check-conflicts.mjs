@@ -4,7 +4,12 @@ import path from 'node:path';
 
 const root = path.resolve(process.cwd(), process.argv[2] ?? '.');
 const ignore = new Set(['node_modules', '.git', 'dist', '.vite']);
-const conflictPattern = /(?:^|\n)(?:<<<<<<< .+|=======|>>>>>>> .+)/;
+const markerStart = '<'.repeat(7);
+const markerMid = '='.repeat(7);
+const markerEnd = '>'.repeat(7);
+const conflictPattern = new RegExp(
+  String.raw`(?:^|\n)(?:${markerStart} .+|${markerMid}|${markerEnd} .+)`,
+);
 
 async function* walk(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
