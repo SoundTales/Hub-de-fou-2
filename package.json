@@ -1,6 +1,6 @@
 {
   "name": "hub-de-fou-2",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "Hub de lecture pour OSRASE - plateforme de storytelling multimedia",
   "keywords": [
     "react",
@@ -10,16 +10,16 @@
     "ebook",
     "storytelling"
   ],
-  "homepage": "https://soundtales.github.io/Hub-de-fou-2/",
+  "homepage": "https://[YOUR-USERNAME].github.io/Hub-de-fou-2/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/SoundTales/Hub-de-fou-2.git"
+    "url": "https://github.com/[YOUR-USERNAME]/Hub-de-fou-2.git"
   },
   "license": "MIT",
   "author": {
     "name": "SoundTales"
   },
-  "private": false,
+  "private": true,
   "type": "module",
   "engines": {
     "node": ">=18.0.0",
@@ -37,9 +37,9 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@types/react": "^18.3.11",
+    "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.2.1",
-    "vite": "^6.3.6"
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.3.4"
   }
 }

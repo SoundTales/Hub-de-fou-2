@@ -9,11 +9,28 @@ export default defineConfig({
     outDir: '../docs',
     emptyOutDir: true,
     assetsDir: 'assets',
-    sourcemap: false
+    // Ensure audio and svg files are copied to the output
+    rollupOptions: {
+      external: [],
+      output: {
+        assetFileNames: (assetInfo) => {
+          // Keep audio and svg files in root for easier access
+          if (assetInfo.name && (assetInfo.name.endsWith('.mp3') || assetInfo.name.endsWith('.svg'))) {
+            return '[name][extname]'
+          }
+          return 'assets/[name]-[hash][extname]'
+        }
+      }
+    }
   },
+  publicDir: '../public',
   server: {
     port: 5173,
-    open: true
+    host: true
+  },
+  preview: {
+    port: 4173,
+    host: true
   }
 });
 
