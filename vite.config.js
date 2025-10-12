@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  base: '/hub-de-fou-2/', // GitHub Pages repository name
+  base: '/osrase-hub/', // GitHub Pages repository name
   plugins: [react()],
   root: 'src',
   build: {
