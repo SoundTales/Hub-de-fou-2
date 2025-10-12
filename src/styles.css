@@ -12,20 +12,23 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; background: #424242; color: #f5f5f5; }
 
-/* Hide scrollbars in fullscreen mode */
-:fullscreen {
-  overflow: hidden !important;
-}
-:-webkit-full-screen {
-  overflow: hidden !important;
-}
-:-moz-full-screen {
-  overflow: hidden !important;
-}
-:-ms-fullscreen {
-  overflow: hidden !important;
+/* Hide scrollbars in fullscreen mode - only on desktop */
+@media (min-width: 769px) {
+  :fullscreen {
+    overflow: hidden !important;
+  }
+  :-webkit-full-screen {
+    overflow: hidden !important;
+  }
+  :-moz-full-screen {
+    overflow: hidden !important;
+  }
+  :-ms-fullscreen {
+    overflow: hidden !important;
+  }
 }
 
+/* Page structure */
 .page { position: relative; background: #424242; color: #f5f5f5; min-height: 100vh; padding: 0 0 80px; display: flex; flex-direction: column; width: 100%; }
 
 /* Safe-area padding for notches */
@@ -456,6 +459,8 @@ body { margin: 0; min-height: 100vh; background: #424242; color: #f5f5f5; }
   position: fixed; inset: 0; z-index: 1000;
   background: #424242; display: flex; align-items: center; justify-content: center;
   transition: opacity .9s ease;
+  /* Ensure gate doesn't interfere with mobile scrolling when not active */
+  touch-action: manipulation;
 }
 
 .gate.is-finishing {
@@ -549,9 +554,38 @@ body { margin: 0; min-height: 100vh; background: #424242; color: #f5f5f5; }
   }
 }
 
-.no-scroll { overflow: hidden !important; height: 100vh; }
+/* Better mobile scroll prevention */
+.no-scroll { 
+  overflow: hidden !important; 
+  height: 100vh; 
+  /* Prevent iOS bounce scrolling */
+  position: fixed;
+  width: 100%;
+}
 
-
-
-.no-scroll { overflow: hidden !important; height: 100vh; }
+/* Mobile-specific improvements */
+@media (max-width: 768px) {
+  .gate {
+    /* Allow normal scrolling on mobile when gate is not active */
+    position: fixed;
+    /* Better touch handling on mobile */
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .gate__hit {
+    /* Improve touch target */
+    min-height: 44px;
+    /* Prevent text selection on mobile */
+    -webkit-user-select: none;
+    user-select: none;
+    /* Better touch feedback */
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Ensure mobile viewport doesn't get confused */
+  .page {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+}
 

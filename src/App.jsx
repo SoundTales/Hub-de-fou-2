@@ -66,22 +66,31 @@ export default function App() {
 
   // Gate helpers: fullscreen + one-shot audio signature
   const enterFullscreen = async () => {
-    const el = document.documentElement
-    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen || el.mozRequestFullScreen
-    if (typeof req === 'function') {
-      try { await req.call(el) } catch {}
+    // Only try fullscreen on desktop, not mobile
+    if (window.innerWidth > 768) {
+      const el = document.documentElement
+      const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen || el.mozRequestFullScreen
+      if (typeof req === 'function') {
+        try { await req.call(el) } catch {}
+      }
     }
   }
 
   const startGate = async () => {
     if (gateState !== 'idle') return
     setGateState('starting')
+    
+    // Add no-scroll class to prevent background scrolling
+    document.body.classList.add('no-scroll')
+    
     await enterFullscreen()
     let finished = false
     const finish = () => {
       if (finished) return
       finished = true
       setGateState('finishing')
+      // Remove no-scroll class when gate is finishing
+      document.body.classList.remove('no-scroll')
       // keep DOM long enough for CSS fade (900ms) to complete comfortably
       setTimeout(() => setShowGate(false), 1100)
     }
@@ -97,12 +106,23 @@ export default function App() {
       let audioLoaded = false
       const audio = new Audio()
       
+      // Better mobile audio support
+      audio.preload = 'auto'
+      audio.volume = 1.0
+      
       for (const path of possiblePaths) {
         try {
           audio.src = path
           await new Promise((resolve, reject) => {
-            audio.addEventListener('canplaythrough', resolve, { once: true })
-            audio.addEventListener('error', reject, { once: true })
+            const timeout = setTimeout(() => reject(new Error('Load timeout')), 5000)
+            audio.addEventListener('canplaythrough', () => {
+              clearTimeout(timeout)
+              resolve()
+            }, { once: true })
+            audio.addEventListener('error', () => {
+              clearTimeout(timeout)
+              reject()
+            }, { once: true })
             audio.load()
           })
           audioLoaded = true
@@ -114,7 +134,16 @@ export default function App() {
       
       if (audioLoaded) {
         audio.addEventListener('ended', finish, { once: true })
-        await audio.play()
+        // For mobile compatibility, wrap in user gesture
+        try {
+          const playPromise = audio.play()
+          if (playPromise !== undefined) {
+            await playPromise
+          }
+        } catch (playError) {
+          console.warn('Audio play failed:', playError)
+          // Continue without audio on mobile if play fails
+        }
         // Start fading out after 4 seconds
         setTimeout(finish, 4000)
       } else {
