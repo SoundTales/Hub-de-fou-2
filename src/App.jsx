@@ -255,8 +255,11 @@ export default function App() {
     <div className="page">
       {isInApp && (
         <div className="iab-banner" role="region" aria-label="Ouvrir dans le navigateur">
-          <button className="iab-btn" type="button" onClick={openInBrowser}>Ouvrir dans le navigateur</button>
-          <button className="iab-btn iab-btn--ghost" type="button" onClick={copyLink}>Copier le lien</button>
+          <p className="iab-text">Pour profiter du plein écran, lancez la liseuse dans votre navigateur préféré.</p>
+          <div className="iab-actions">
+            <button className="iab-btn" type="button" onClick={openInBrowser}>Ouvrir dans le navigateur</button>
+            <button className="iab-btn iab-btn--ghost" type="button" onClick={copyLink}>Copier le lien</button>
+          </div>
         </div>
       )}
       <header className="hero">
@@ -343,7 +346,6 @@ export default function App() {
     </div>
   )
 }
-
 
 
 
