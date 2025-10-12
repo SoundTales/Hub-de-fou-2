@@ -66,8 +66,14 @@ export default function App() {
 
   // Gate helpers: fullscreen + one-shot audio signature
   const enterFullscreen = async () => {
-    // Only try fullscreen on desktop, not mobile
-    if (window.innerWidth > 768) {
+    // Detect in-app browsers (Facebook, Instagram, etc.)
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera
+    const isInAppBrowser = /FBAN|FBAV|Instagram|MessengerLiteForiOS|MessengerForiOS/i.test(userAgent) ||
+                          /; wv\)/i.test(userAgent) || // Android WebView
+                          window.navigator.standalone === false // iOS PWA not in standalone
+
+    // Only try fullscreen on desktop and not in in-app browsers
+    if (!isInAppBrowser && window.innerWidth > 768) {
       const el = document.documentElement
       const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen || el.mozRequestFullScreen
       if (typeof req === 'function') {
@@ -94,6 +100,12 @@ export default function App() {
       // keep DOM long enough for CSS fade (900ms) to complete comfortably
       setTimeout(() => setShowGate(false), 1100)
     }
+
+    // Detect in-app browsers but still try to play audio
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera
+    const isInAppBrowser = /FBAN|FBAV|Instagram|MessengerLiteForiOS|MessengerForiOS/i.test(userAgent) ||
+                          /; wv\)/i.test(userAgent)
+
     try {
       // Try multiple possible paths for the audio file
       const possiblePaths = [
@@ -106,9 +118,17 @@ export default function App() {
       let audioLoaded = false
       const audio = new Audio()
       
-      // Better mobile audio support
+      // Enhanced mobile/in-app audio support
       audio.preload = 'auto'
       audio.volume = 1.0
+      audio.muted = false
+      
+      // Special handling for in-app browsers
+      if (isInAppBrowser) {
+        // Try to unlock audio context immediately on user interaction
+        audio.autoplay = false
+        audio.controls = false
+      }
       
       for (const path of possiblePaths) {
         try {
@@ -134,24 +154,77 @@ export default function App() {
       
       if (audioLoaded) {
         audio.addEventListener('ended', finish, { once: true })
-        // For mobile compatibility, wrap in user gesture
+        
+        // Enhanced audio play strategy for in-app browsers
         try {
-          const playPromise = audio.play()
-          if (playPromise !== undefined) {
-            await playPromise
+          if (isInAppBrowser) {
+            // Force user gesture context for in-app browsers
+            console.log('In-app browser detected, attempting audio with user gesture')
+            
+            // Multiple fallback strategies
+            const strategies = [
+              // Strategy 1: Direct play
+              () => audio.play(),
+              // Strategy 2: Play with context
+              () => {
+                return new Promise((resolve, reject) => {
+                  audio.currentTime = 0
+                  const playPromise = audio.play()
+                  if (playPromise) {
+                    playPromise.then(resolve).catch(reject)
+                  } else {
+                    resolve()
+                  }
+                })
+              },
+              // Strategy 3: Muted then unmuted
+              () => {
+                audio.muted = true
+                return audio.play().then(() => {
+                  setTimeout(() => {
+                    audio.muted = false
+                  }, 100)
+                })
+              }
+            ]
+            
+            let played = false
+            for (const strategy of strategies) {
+              try {
+                await strategy()
+                played = true
+                console.log('Audio started successfully with strategy')
+                break
+              } catch (e) {
+                console.warn('Audio strategy failed:', e)
+                continue
+              }
+            }
+            
+            if (!played) {
+              console.warn('All audio strategies failed in in-app browser')
+            }
+            
+          } else {
+            // Standard browsers
+            const playPromise = audio.play()
+            if (playPromise !== undefined) {
+              await playPromise
+            }
           }
         } catch (playError) {
           console.warn('Audio play failed:', playError)
-          // Continue without audio on mobile if play fails
+          // Continue with visual animation even if audio fails
         }
-        // Start fading out after 4 seconds
+        
+        // Start fading out after 4 seconds regardless of audio success
         setTimeout(finish, 4000)
       } else {
         console.warn('Could not load signature.mp3')
         setTimeout(finish, 4000)
       }
     } catch (error) {
-      console.warn('Audio playback failed:', error)
+      console.warn('Audio setup failed:', error)
       setTimeout(finish, 4000)
     }
   }
