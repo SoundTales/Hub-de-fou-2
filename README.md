@@ -1,32 +1,58 @@
-# OSRASE Landing Page Hub
+# Digital Story Hub - Landing Page
 
-This repository hosts the OSRASE landing page that was iteratively refined in the previous tasks.
+A modern, responsive landing page for digital storytelling platforms. Built with React and Vite for optimal performance and developer experience.
 
-## Exporter vers GitHub
+## 🎯 Features
 
-1. Vérifiez l'absence de marqueurs de conflit :
-   ```bash
-   npm run lint:conflicts
-   ```
-2. Construisez le paquet statique. La commande exécute automatiquement la vérification précédente avant de copier les fichiers :
-   ```bash
-   npm run build
-   ```
-3. Publiez le contenu du dossier `dist/` dans l'export GitHub.
+- **Responsive Design**: Optimized for desktop, tablet, and mobile devices
+- **Progressive Image Loading**: Enhanced performance with lazy loading and placeholders  
+- **Accessibility First**: WCAG compliant with keyboard navigation and screen reader support
+- **Modern UI/UX**: Smooth animations and micro-interactions
+- **Fast Development**: Hot reload with Vite and React Fast Refresh
 
-Les scripts `serve.mjs` et `build.mjs` détectent automatiquement si vos fichiers sources se trouvent à la racine du projet (`./index.html`, `./styles.css`) ou dans `./src/`. Vous pouvez passer un dossier source explicite en argument si besoin :
+## 🚀 Quick Start
 
-```bash
-node scripts/serve.mjs src
-node scripts/build.mjs src
-```
+### Prerequisites
 
-## Développement local
+- Node.js 18+ 
+- npm 8+
 
-Servez l'interface avec le serveur statique :
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/yourusername/digital-story-hub.git
+cd digital-story-hub
+
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
 ```
 
-Le serveur écoute par défaut sur `http://localhost:5173` et diffuse automatiquement le bon répertoire de travail.
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+## 🎨 Design System
+
+### Colors
+- Primary Background: `#424242`
+- Text Light: `#fefff4` 
+- Accent Yellow: `#ffff80`
+- Text Dark: `#1f2023`
+
+### Typography
+- Primary Font: Playfair Display (serif) - Open Source
+- Secondary Font: Libre Baskerville (serif) - Open Source
+
+## 🙏 Acknowledgments
+
+- Design inspiration from modern digital platforms
+- Fonts from Google Fonts (Open Source)
+- Demo images from Picsum Photos (Creative Commons)
+- Icons created with custom SVG (no copyright restrictions)
+- All content is original or Creative Commons licensed
+
+---
+
+Built with ❤️ for digital storytelling
