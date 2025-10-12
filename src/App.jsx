@@ -68,9 +68,9 @@ export default function App() {
   const enterFullscreen = async () => {
     // Detect in-app browsers (Facebook, Instagram, etc.)
     const userAgent = navigator.userAgent || navigator.vendor || window.opera
-    const isInAppBrowser = /FBAN|FBAV|Instagram|MessengerLiteForiOS|MessengerForiOS/i.test(userAgent) ||
+    const isInAppBrowser = /FBAN|FBAV|Instagram|Messenger|Line\//i.test(userAgent) ||
                           /; wv\)/i.test(userAgent) || // Android WebView
-                          window.navigator.standalone === false // iOS PWA not in standalone
+                          /FB_IAB|FBAN|FBAV/i.test(userAgent)
 
     // Only try fullscreen on desktop and not in in-app browsers
     if (!isInAppBrowser && window.innerWidth > 768) {
@@ -85,11 +85,17 @@ export default function App() {
   const startGate = async () => {
     if (gateState !== 'idle') return
     setGateState('starting')
+    // Detect in-app browsers
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera
+    const isInAppBrowser = /FBAN|FBAV|Instagram|Messenger|Line\//i.test(userAgent) || /; wv\)/i.test(userAgent)
+
+    // Add no-scroll class only when safe (desktop/regular browsers)
+    if (!isInAppBrowser && window.innerWidth > 768) {
+      document.body.classList.add('no-scroll')
+    }
     
-    // Add no-scroll class to prevent background scrolling
-    document.body.classList.add('no-scroll')
-    
-    await enterFullscreen()
+    // Don't await here to preserve user gesture chain for audio
+    enterFullscreen()
     let finished = false
     const finish = () => {
       if (finished) return
@@ -101,13 +107,8 @@ export default function App() {
       setTimeout(() => setShowGate(false), 1100)
     }
 
-    // Detect in-app browsers but still try to play audio
-    const userAgent = navigator.userAgent || navigator.vendor || window.opera
-    const isInAppBrowser = /FBAN|FBAV|Instagram|MessengerLiteForiOS|MessengerForiOS/i.test(userAgent) ||
-                          /; wv\)/i.test(userAgent)
-
     try {
-      // Try multiple possible paths for the audio file
+      // Always try audio on user gesture (works in most in-app browsers)
       const possiblePaths = [
         `${baseUrl}signature.mp3`,
         `./signature.mp3`,
@@ -118,106 +119,41 @@ export default function App() {
       let audioLoaded = false
       const audio = new Audio()
       
-      // Enhanced mobile/in-app audio support
+      // Standard audio settings
       audio.preload = 'auto'
       audio.volume = 1.0
       audio.muted = false
-      
-      // Special handling for in-app browsers
-      if (isInAppBrowser) {
-        // Try to unlock audio context immediately on user interaction
-        audio.autoplay = false
-        audio.controls = false
-      }
+      // Improve mobile / in-app compatibility
+      // playsInline is a no-op for audio but harmless and helps on some WebViews
+      try { audio.playsInline = true } catch {}
       
       for (const path of possiblePaths) {
         try {
           audio.src = path
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Load timeout')), 5000)
-            audio.addEventListener('canplaythrough', () => {
-              clearTimeout(timeout)
-              resolve()
-            }, { once: true })
-            audio.addEventListener('error', () => {
-              clearTimeout(timeout)
-              reject()
-            }, { once: true })
-            audio.load()
-          })
+          // Kick playback immediately within the gesture chain
+          audio.load()
+          const playPromise = audio.play()
+          if (playPromise !== undefined) {
+            await playPromise
+          }
           audioLoaded = true
           break
         } catch {
+          // Try next path
           continue
         }
       }
       
       if (audioLoaded) {
         audio.addEventListener('ended', finish, { once: true })
-        
-        // Enhanced audio play strategy for in-app browsers
         try {
-          if (isInAppBrowser) {
-            // Force user gesture context for in-app browsers
-            console.log('In-app browser detected, attempting audio with user gesture')
-            
-            // Multiple fallback strategies
-            const strategies = [
-              // Strategy 1: Direct play
-              () => audio.play(),
-              // Strategy 2: Play with context
-              () => {
-                return new Promise((resolve, reject) => {
-                  audio.currentTime = 0
-                  const playPromise = audio.play()
-                  if (playPromise) {
-                    playPromise.then(resolve).catch(reject)
-                  } else {
-                    resolve()
-                  }
-                })
-              },
-              // Strategy 3: Muted then unmuted
-              () => {
-                audio.muted = true
-                return audio.play().then(() => {
-                  setTimeout(() => {
-                    audio.muted = false
-                  }, 100)
-                })
-              }
-            ]
-            
-            let played = false
-            for (const strategy of strategies) {
-              try {
-                await strategy()
-                played = true
-                console.log('Audio started successfully with strategy')
-                break
-              } catch (e) {
-                console.warn('Audio strategy failed:', e)
-                continue
-              }
-            }
-            
-            if (!played) {
-              console.warn('All audio strategies failed in in-app browser')
-            }
-            
-          } else {
-            // Standard browsers
-            const playPromise = audio.play()
-            if (playPromise !== undefined) {
-              await playPromise
-            }
+          const playPromise = audio.play()
+          if (playPromise !== undefined) {
+            await playPromise
           }
         } catch (playError) {
           console.warn('Audio play failed:', playError)
-          // Continue with visual animation even if audio fails
         }
-        
-        // Start fading out after 4 seconds regardless of audio success
         setTimeout(finish, 4000)
       } else {
         console.warn('Could not load signature.mp3')
@@ -327,8 +263,6 @@ export default function App() {
     </div>
   )
 }
-
-
 
 
 

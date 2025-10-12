@@ -426,7 +426,7 @@ body { margin: 0; min-height: 100vh; background: #424242; color: #f5f5f5; }
 
 /* Floating actions bar (appears when hero actions are off-screen) */
 .fab {
-  position: fixed;
+  position: fixed !important;
   left: 50%; bottom: max(16px, env(safe-area-inset-bottom));
   transform: translateX(-50%);
   display: flex; gap: 10px; align-items: center; flex-wrap: nowrap;
@@ -434,10 +434,15 @@ body { margin: 0; min-height: 100vh; background: #424242; color: #f5f5f5; }
   background: transparent;
   box-shadow: none;
   border-radius: 0;
-  z-index: 100;
+  z-index: 10000;
   /* smooth appear */
   opacity: 0;
   animation: fab-fade-in 360ms ease-out forwards;
+  /* Improve reliability of fixed on mobile/WebViews */
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  pointer-events: auto;
 }
 .fab .hero__cta { height: 48px !important; padding: 0 28px !important; white-space: nowrap; }
 .fab .hero__bookmark { width: 48px !important; height: 48px !important; }
@@ -447,6 +452,25 @@ body { margin: 0; min-height: 100vh; background: #424242; color: #f5f5f5; }
     left: auto; right: 24px; transform: none;
     bottom: max(24px, env(safe-area-inset-bottom));
   }
+}
+
+/* Strengthen fixed positioning behavior on iOS/WebViews */
+@supports (-webkit-touch-callout: none) {
+  .fab {
+    position: fixed !important;
+  }
+}
+
+/* Phone landscape: reduce hero size and avoid overlaps; make gallery 2 cols */
+@media (max-width: 896px) and (orientation: landscape) {
+  :root { --hero-bleed: 120px; }
+  .hero { height: 42vh !important; }
+  .hero__content { width: min(92vw, 640px) !important; gap: 12px; }
+  .hero__title { font-size: clamp(40px, 9vw, 72px) !important; }
+  .hero__actions { gap: 8px; margin-top: 12px; }
+  .hero__cta { height: 48px !important; padding: 0 48px !important; }
+  .hero__bookmark { width: 48px !important; height: 48px !important; }
+  .gallery { width: 96vw; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin-top: 20px; }
 }
 
 @keyframes fab-fade-in {
@@ -479,7 +503,6 @@ body { margin: 0; min-height: 100vh; background: #424242; color: #f5f5f5; }
   gap: clamp(40px, 8vh, 80px);
   /* Enhanced touch handling for in-app browsers */
   -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
-  tap-highlight-color: rgba(255, 255, 255, 0.1);
 }
 .gate__msg {
   font-family: 'Playfair Display', serif;
@@ -531,6 +554,11 @@ body { margin: 0; min-height: 100vh; background: #424242; color: #f5f5f5; }
   transform: scale(0.9);
 }
 
+/* When fading out, let scroll/pan pass through immediately */
+.gate.is-finishing {
+  pointer-events: none;
+}
+
 /* Media queries adjustments for gate logo */
 @media (max-width: 768px) {
   .gate__logo {
@@ -556,28 +584,35 @@ body { margin: 0; min-height: 100vh; background: #424242; color: #f5f5f5; }
   }
 }
 
-/* Better mobile scroll prevention */
+/* Better mobile scroll prevention with special in-app browser handling */
 .no-scroll { 
   overflow: hidden !important; 
   height: 100vh; 
   height: 100dvh; /* Dynamic viewport height for better mobile support */
-  /* Prevent iOS bounce scrolling */
-  position: fixed;
+  /* More gentle approach for in-app browsers */
+  position: relative;
   width: 100%;
-  /* Prevent scroll chaining in embedded browsers */
-  overscroll-behavior: none;
-  -webkit-overflow-scrolling: auto; /* Disable momentum scrolling when no-scroll */
+  /* Prevent scroll chaining but allow some flexibility */
+  overscroll-behavior: contain;
 }
 
-/* Mobile-specific improvements */
+/* Only apply aggressive scroll prevention on standard browsers */
+@media (min-width: 769px) {
+  .no-scroll {
+    position: fixed;
+    -webkit-overflow-scrolling: auto;
+    overscroll-behavior: none;
+  }
+}
+
+/* Mobile-specific improvements with enhanced in-app browser support */
 @media (max-width: 768px) {
   .gate {
-    /* Allow normal scrolling on mobile when gate is not active */
     position: fixed;
     /* Better touch handling on mobile */
     -webkit-overflow-scrolling: touch;
-    /* Prevent overscroll behavior in embedded browsers */
-    overscroll-behavior: contain;
+    /* Less aggressive overscroll for in-app browsers */
+    overscroll-behavior: auto;
     /* Enhanced performance for in-app browsers */
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
@@ -593,38 +628,41 @@ body { margin: 0; min-height: 100vh; background: #424242; color: #f5f5f5; }
     user-select: none;
     /* Better touch feedback for in-app browsers */
     -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
-    /* Prevent zoom on double tap in in-app browsers */
-    touch-action: manipulation;
+    /* Allow scroll gestures to pass through when appropriate */
+    touch-action: pan-y;
     /* Enhanced interaction area for in-app browsers */
     padding: 20px;
   }
   
-  /* Ensure mobile viewport doesn't get confused */
+  /* Ensure mobile viewport works well in all contexts */
   .page {
     min-height: 100vh;
     min-height: -webkit-fill-available;
-    min-height: 100dvh; /* Dynamic viewport for embedded browsers */
-    /* Prevent scroll issues in embedded contexts */
-    overscroll-behavior: none;
+    min-height: 100dvh;
+    /* Allow scroll in embedded contexts */
+    overscroll-behavior: auto;
   }
 
-  /* Specific fixes for in-app browsers */
+  /* Less aggressive fixes for in-app browsers */
   body {
-    /* Prevent elastic scrolling in iOS in-app browsers */
-    -webkit-overflow-scrolling: auto;
-    overscroll-behavior: none;
-    /* Force hardware acceleration */
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
+    /* Allow natural scrolling in in-app browsers */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: auto;
   }
 
-  /* Fix viewport and interaction issues in Facebook/Instagram browsers */
+  /* Minimal intervention for WebView compatibility */
   html {
     overflow-x: hidden;
     -webkit-text-size-adjust: 100%;
-    /* Enhanced touch handling for WebViews */
-    -webkit-touch-callout: none;
-    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Special handling when no-scroll is active on mobile */
+  body.no-scroll {
+    /* Gentler scroll prevention for mobile/in-app */
+    overflow: hidden;
+    position: relative;
+    height: 100vh;
+    /* Don't use fixed positioning on mobile */
   }
 }
 
@@ -632,7 +670,7 @@ body { margin: 0; min-height: 100vh; background: #424242; color: #f5f5f5; }
 @supports (-webkit-touch-callout: none) {
   .gate {
     /* iOS WebView specific fixes */
-    -webkit-overflow-scrolling: auto;
+    -webkit-overflow-scrolling: touch;
     /* Better performance in WebViews */
     -webkit-transform: translate3d(0, 0, 0);
     transform: translate3d(0, 0, 0);
@@ -641,8 +679,33 @@ body { margin: 0; min-height: 100vh; background: #424242; color: #f5f5f5; }
   .gate__hit {
     /* Enhanced touch response in WebViews */
     -webkit-tap-highlight-color: rgba(255, 255, 255, 0.05);
-    /* Better interaction handling */
+    /* Better interaction handling but allow scroll */
     -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+  
+  .no-scroll {
+    /* Less aggressive scroll prevention on iOS WebView */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: auto;
+    /* Don't use fixed positioning in WebViews */
+    position: relative !important;
   }
 }
 
+/* Special handling for known in-app browsers */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  /* Detect WebKit browsers (includes most in-app browsers) */
+  .no-scroll {
+    /* Minimal scroll intervention */
+    overflow-y: auto;
+    position: relative;
+    /* Allow momentum scrolling */
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .gate {
+    /* Ensure gate works without breaking scroll */
+    overscroll-behavior: auto;
+  }
+}
