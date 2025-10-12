@@ -9,6 +9,7 @@ export default function App() {
   const [gateState, setGateState] = useState('idle')
   // Fix baseUrl to work in both dev and production
   const baseUrl = import.meta.env.BASE_URL || './'
+  const [isInApp, setIsInApp] = useState(false)
 
   // Eyebrow fitter (keeps eyebrow width matching title)
   useEffect(() => {
@@ -64,7 +65,32 @@ export default function App() {
     }
   }, [])
 
+  // Detect in-app browsers (FB/IG/Messenger WebView, Android WebView)
+  useEffect(() => {
+    const ua = navigator.userAgent || navigator.vendor || window.opera
+    const inApp = /FBAN|FBAV|Instagram|Messenger|Line\//i.test(ua) || /; wv\)/i.test(ua) || /FB_IAB/i.test(ua)
+    setIsInApp(inApp)
+  }, [])
+
   // Gate helpers: fullscreen + one-shot audio signature
+  // Fallback pseudo-fullscreen for in-app browsers that don't support Fullscreen API
+  const enablePseudoFullscreen = () => {
+    try {
+      document.documentElement.classList.add('pseudo-fullscreen')
+      document.body.classList.add('pseudo-fullscreen')
+      const apply = () => {
+        try { document.documentElement.style.setProperty('--inner-h', `${window.innerHeight}px`) } catch {}
+        try { window.scrollTo(0, 1) } catch {}
+      }
+      apply()
+      // Update on viewport changes
+      const onResize = () => setTimeout(apply, 100)
+      const onOrient = () => setTimeout(apply, 300)
+      window.addEventListener('resize', onResize, { passive: true })
+      window.addEventListener('orientationchange', onOrient, { passive: true })
+    } catch {}
+  }
+
   const enterFullscreen = async () => {
     // Detect in-app browsers (Facebook, Instagram, etc.)
     const userAgent = navigator.userAgent || navigator.vendor || window.opera
@@ -72,14 +98,62 @@ export default function App() {
                           /; wv\)/i.test(userAgent) || // Android WebView
                           /FB_IAB|FBAN|FBAV/i.test(userAgent)
 
-    // Only try fullscreen on desktop and not in in-app browsers
-    if (!isInAppBrowser && window.innerWidth > 768) {
-      const el = document.documentElement
-      const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen || el.mozRequestFullScreen
-      if (typeof req === 'function') {
-        try { await req.call(el) } catch {}
-      }
+    // Always try the Fullscreen API on user gesture
+    const el = document.documentElement
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen || el.mozRequestFullScreen
+    if (typeof req === 'function') {
+      try { await req.call(el) } catch {}
     }
+
+    // In in-app browsers, fall back to pseudo-fullscreen to maximize viewport
+    if (isInAppBrowser) {
+      enablePseudoFullscreen()
+    }
+  }
+
+  const openInBrowser = () => {
+    try {
+      const ua = navigator.userAgent || navigator.vendor || window.opera
+      const isAndroid = /Android/i.test(ua)
+      const url = window.location.href.split('#')[0]
+      if (isAndroid) {
+        const proto = (location.protocol || 'https:').replace(':', '')
+        const intent = `intent://${location.host}${location.pathname}${location.search}#Intent;scheme=${proto};package=com.android.chrome;end`
+        window.location.href = intent
+        setTimeout(() => {
+          try { window.open(url, '_blank', 'noopener') } catch {}
+        }, 400)
+      } else {
+        const a = document.createElement('a')
+        a.href = url
+        a.target = '_blank'
+        a.rel = 'noopener'
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      }
+    } catch {}
+  }
+
+  const copyLink = async () => {
+    const url = window.location.href
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url)
+        return
+      }
+    } catch {}
+    try {
+      const tmp = document.createElement('textarea')
+      tmp.value = url
+      tmp.setAttribute('readonly', '')
+      tmp.style.position = 'absolute'
+      tmp.style.left = '-9999px'
+      document.body.appendChild(tmp)
+      tmp.select()
+      document.execCommand('copy')
+      document.body.removeChild(tmp)
+    } catch {}
   }
 
   const startGate = async () => {
@@ -179,6 +253,12 @@ export default function App() {
 
   return (
     <div className="page">
+      {isInApp && (
+        <div className="iab-banner" role="region" aria-label="Ouvrir dans le navigateur">
+          <button className="iab-btn" type="button" onClick={openInBrowser}>Ouvrir dans le navigateur</button>
+          <button className="iab-btn iab-btn--ghost" type="button" onClick={copyLink}>Copier le lien</button>
+        </div>
+      )}
       <header className="hero">
         <div className="hero__fade" aria-hidden="true"></div>
 
@@ -263,8 +343,6 @@ export default function App() {
     </div>
   )
 }
-
-
 
 
 
