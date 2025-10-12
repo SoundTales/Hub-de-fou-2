@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+﻿import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   root: 'src',
   build: {
-    outDir: '../dist',
+    outDir: '../docs',
     emptyOutDir: true,
     assetsDir: 'assets',
     sourcemap: false
@@ -16,3 +16,4 @@ export default defineConfig({
     open: true
   }
 });
+
