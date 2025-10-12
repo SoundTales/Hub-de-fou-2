@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Hub de lecture pour OSRASE - Plateforme de storytelling multimédia",
   "keywords": ["react", "vite", "landing-page", "responsive", "ebook", "storytelling"],
-  "homepage": "https://yourusername.github.io/osrase-hub",
+  "homepage": "https://yourusername.github.io/osrase-hub/",
   "repository": {
     "type": "git",
     "url": "https://github.com/yourusername/osrase-hub.git"
