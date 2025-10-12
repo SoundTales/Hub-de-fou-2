@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './styles.css';
@@ -24,7 +24,7 @@ class ErrorBoundary extends React.Component {
           <h1>Erreur de chargement</h1>
           <p>Une erreur s'est produite lors du chargement de l'application.</p>
           <details style={{ marginTop: '10px' }}>
-            <summary>Détails techniques</summary>
+            <summary>Details techniques</summary>
             <pre style={{ background: '#f5f5f5', padding: '10px', overflow: 'auto' }}>
               {this.state.error?.toString()}
             </pre>
@@ -38,7 +38,7 @@ class ErrorBoundary extends React.Component {
 
 const root = document.getElementById('root');
 if (!root) {
-  document.body.innerHTML = '<div style="padding:20px;">Erreur: Élément root non trouvé</div>';
+  document.body.innerHTML = '<div style="padding:20px;">Erreur: element root non trouve</div>';
 } else {
   ReactDOM.createRoot(root).render(
     <React.StrictMode>

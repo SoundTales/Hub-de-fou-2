@@ -1,58 +1,48 @@
-# Digital Story Hub - Landing Page
+# Hub de Fou 2
 
-A modern, responsive landing page for digital storytelling platforms. Built with React and Vite for optimal performance and developer experience.
+Landing page for the OSRASE universe by SoundTales. The project runs on React 18 and Vite with a configuration tailored for GitHub Pages deployment.
 
-## 🎯 Features
+## Features
+- Responsive hero layout with safe-area handling
+- Dynamic gallery grid fed by generated story cards
+- Accessibility minded focus states and reduced motion fallbacks
+- Production ready Vite build that targets GitHub Pages
 
-- **Responsive Design**: Optimized for desktop, tablet, and mobile devices
-- **Progressive Image Loading**: Enhanced performance with lazy loading and placeholders  
-- **Accessibility First**: WCAG compliant with keyboard navigation and screen reader support
-- **Modern UI/UX**: Smooth animations and micro-interactions
-- **Fast Development**: Hot reload with Vite and React Fast Refresh
+## Prerequisites
+- Node.js 18 or later
+- npm 8 or later
 
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 18+ 
-- npm 8+
-
-### Installation
-
+## Installation
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/digital-story-hub.git
-cd digital-story-hub
-
-# Install dependencies
 npm install
-
-# Start development server
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+Open `http://localhost:5173` in your browser to view the development build.
 
-## 🎨 Design System
+## Available Scripts
+- `npm run dev` – start the Vite development server
+- `npm run build` – generate the static production bundle in `dist/`
+- `npm run preview` – serve the production bundle locally for testing
 
-### Colors
-- Primary Background: `#424242`
-- Text Light: `#fefff4` 
-- Accent Yellow: `#ffff80`
-- Text Dark: `#1f2023`
+## Deployment
+1. Ensure dependencies are installed: `npm install`
+2. Build the site: `npm run build`
+3. Push the contents of the repository to `main`
+4. Configure the GitHub repository (`SoundTales/Hub-de-fou-2`) to serve the `dist/` folder via GitHub Pages (Settings → Pages → Deploy from branch → `main` / `dist`)
 
-### Typography
-- Primary Font: Playfair Display (serif) - Open Source
-- Secondary Font: Libre Baskerville (serif) - Open Source
+The Vite config sets `base: '/Hub-de-fou-2/'`, so static assets resolve correctly when hosted from GitHub Pages.
 
-## 🙏 Acknowledgments
+## Project Structure
+```
+.
+├─ src/            # React entry point, components, and styling
+├─ .github/        # Issue templates and repository workflows
+├─ node_modules/   # Installed dependencies (not committed)
+├─ dist/           # Build output (generated)
+└─ vite.config.js  # Vite configuration for dev and production
+```
 
-- Design inspiration from modern digital platforms
-- Fonts from Google Fonts (Open Source)
-- Demo images from Picsum Photos (Creative Commons)
-- Icons created with custom SVG (no copyright restrictions)
-- All content is original or Creative Commons licensed
+## License
 
----
-
-Built with ❤️ for digital storytelling
+Distributed under the MIT License. See `LICENSE` for details.

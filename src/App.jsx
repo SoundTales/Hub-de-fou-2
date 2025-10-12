@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+﻿import { useEffect, useRef } from 'react'
 
 export default function App() {
   const eyebrowRef = useRef(null)
@@ -89,7 +89,7 @@ export default function App() {
       <main className="gallery">
         {Array.from({ length: 22 }, (_, i) => (
           <article key={i + 1} className="card">
-            <h2 className="card__label">Résignation</h2>
+            <h2 className="card__label">Resignation</h2>
             <div
               className="card__media"
               style={{

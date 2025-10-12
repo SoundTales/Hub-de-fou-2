@@ -1,17 +1,23 @@
 {
-  "name": "osrase-hub",
+  "name": "hub-de-fou-2",
   "version": "1.0.0",
-  "description": "Hub de lecture pour OSRASE - Plateforme de storytelling multimédia",
-  "keywords": ["react", "vite", "landing-page", "responsive", "ebook", "storytelling"],
-  "homepage": "https://yourusername.github.io/osrase-hub/",
+  "description": "Hub de lecture pour OSRASE - plateforme de storytelling multimedia",
+  "keywords": [
+    "react",
+    "vite",
+    "landing-page",
+    "responsive",
+    "ebook",
+    "storytelling"
+  ],
+  "homepage": "https://soundtales.github.io/Hub-de-fou-2/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/osrase-hub.git"
+    "url": "https://github.com/SoundTales/Hub-de-fou-2.git"
   },
   "license": "MIT",
   "author": {
-    "name": "Your Name",
-    "email": "your.email@example.com"
+    "name": "SoundTales"
   },
   "private": false,
   "type": "module",

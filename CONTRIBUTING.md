@@ -1,54 +1,32 @@
-# Contributing to OSRASE Landing Page
+# Contributing
 
-Thank you for your interest in contributing! This document provides guidelines for contributing to the project.
+Thank you for your interest in improving the Hub de Fou 2 landing page. The guidelines below explain how to set up your environment and submit changes.
 
-## 🚀 Getting Started
+## Getting Started
+1. Fork the repository and clone your fork.
+2. Create a feature branch: `git checkout -b feature/my-change`.
+3. Install dependencies with `npm install`.
+4. Run the dev server (`npm run dev`) while you work.
+5. Execute `npm run build` to validate the production bundle before opening a pull request.
 
-1. Fork the repository
-2. Clone your fork: `git clone https://github.com/yourusername/hub-de-fou-2.git`
-3. Create a branch: `git checkout -b feature/your-feature-name`
-4. Make your changes
-5. Test locally: `npm run dev`
-6. Build: `npm run build`
-7. Commit: `git commit -m "Add: your feature description"`
-8. Push: `git push origin feature/your-feature-name`
-9. Create a Pull Request
+## Pull Request Checklist
+- Keep each pull request focused on a single change.
+- Update documentation when you introduce new behaviour.
+- Run `npm run build` locally and ensure there are no console errors in the browser.
+- Provide screenshots or short notes for UI changes.
+- Make sure your branch is up to date with `main` before submitting the PR.
 
-## 📋 Pull Request Guidelines
+## Code Style Notes
+- Use modern ES modules and React functional components.
+- Prefer descriptive variable names and small, reusable functions.
+- Keep CSS in `src/styles.css` unless a component specific override is required.
+- Respect accessibility best practices (semantic HTML, focus handling, reduced motion).
 
-- **One feature per PR**: Keep changes focused and atomic
-- **Clear description**: Explain what changes and why
-- **Test thoroughly**: Ensure changes work on all screen sizes
-- **Follow conventions**: Match existing code style and patterns
-
-## 🎨 Code Style
-
-- Use modern ES6+ JavaScript
-- Follow React hooks patterns
-- Use semantic HTML
-- Write accessible code (ARIA, keyboard navigation)
-- Use CSS custom properties for theming
-- Mobile-first responsive design
-
-## 🐛 Bug Reports
-
-When reporting bugs, please include:
-- Browser and version
-- Screen size where issue occurs
+## Reporting Issues
+When filing a bug report, include:
+- Expected versus actual behaviour
 - Steps to reproduce
-- Expected vs actual behavior
-- Screenshots if applicable
+- Browser and device details
+- Any relevant screenshots or logs
 
-## 💡 Feature Requests
-
-- Check existing issues first
-- Provide clear use case
-- Consider accessibility impact
-- Think about mobile/tablet experience
-
-## 🔧 Development Tips
-
-- Use browser dev tools for responsive testing
-- Test with keyboard navigation
-- Verify with screen readers when possible
-- Check performance with Lighthouse
+Thank you for helping us keep the experience polished for readers!
