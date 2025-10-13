@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import ReaderShell from './reader/ReaderShell.jsx'
+﻿import { useEffect, useRef, useState } from 'react'
 
 export default function App() {
   const eyebrowRef = useRef(null)
@@ -11,23 +10,11 @@ export default function App() {
   // Fix baseUrl to work in both dev and production
   const baseUrl = import.meta.env.BASE_URL || './'
   // Mark current mode for style/behavior scoping (hub vs reader)
-  const [isInApp, setIsInApp] = useState(false)
-
-  // Simple hash-based routing to isolate the reader from the hub
-  const [route, setRoute] = useState(() => window.location.hash || '#/')
   useEffect(() => {
-    const onHash = () => setRoute(window.location.hash || '#/')
-    window.addEventListener('hashchange', onHash)
-    return () => window.removeEventListener('hashchange', onHash)
-  }, [])
-  const isReaderRoute = /^#\/?reader\//i.test(route)
-
-  useEffect(() => {
-    if (!isReaderRoute) {
-      try { document.body.dataset.mode = 'hub' } catch {}
-    }
+    try { document.body.dataset.mode = 'hub' } catch {}
     return () => { try { delete document.body.dataset.mode } catch {} }
-  }, [isReaderRoute])
+  }, [])
+  const [isInApp, setIsInApp] = useState(false)
 
   // Eyebrow fitter (keeps eyebrow width matching title)
   useEffect(() => {
@@ -269,14 +256,8 @@ export default function App() {
     return () => io.disconnect()
   }, [])
 
-  // Render reader shell when on reader route
-  if (isReaderRoute) {
-    const id = (route.match(/^#\/?reader\/(.+)$/i) || [])[1] || '1'
-    return <ReaderShell chapterId={decodeURIComponent(id)} baseUrl={baseUrl} />
-  }
-
   return (
-    <div className="page" data-role="hub">
+    <div className="page">
       {isInApp && (
         <div className="iab-banner" role="region" aria-label="Ouvrir dans le navigateur">
           <p className="iab-text">Pour profiter du plein écran, lancez la liseuse dans votre navigateur préféré.</p>
@@ -319,27 +300,7 @@ export default function App() {
 
       <main className="gallery">
         {Array.from({ length: 22 }, (_, i) => (
-          <article
-            key={i + 1}
-            className="card"
-            role="button"
-            tabIndex={0}
-            onClick={() => {
-              const img = `https://picsum.photos/800/450?random=${i + 1}`
-              const payload = { id: String(i + 1), img, title: 'À JAMAIS, POUR TOUJOURS' }
-              try { sessionStorage.setItem('reader:splash', JSON.stringify(payload)) } catch {}
-              window.location.hash = `#/reader/${i + 1}`
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                const img = `https://picsum.photos/800/450?random=${i + 1}`
-                const payload = { id: String(i + 1), img, title: 'À JAMAIS, POUR TOUJOURS' }
-                try { sessionStorage.setItem('reader:splash', JSON.stringify(payload)) } catch {}
-                window.location.hash = `#/reader/${i + 1}`
-              }
-            }}
-          >
+          <article key={i + 1} className="card">
             <h2 className="card__label">Resignation</h2>
             <div
               className="card__media"
@@ -390,3 +351,6 @@ export default function App() {
     </div>
   )
 }
+
+
+
