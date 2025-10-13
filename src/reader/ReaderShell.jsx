@@ -40,7 +40,9 @@ export default function ReaderShell({ chapterId, baseUrl }) {
         splashProcessed = true
       }
     } catch {}
-  }, [])  // PrÃ©chargement minimal (remplacÃ© plus tard par vrai fetch + decode)
+  }, [])
+
+  // PrÃ©chargement minimal (remplacÃ© plus tard par vrai fetch + decode)
   useEffect(() => {
     let alive = true
     const doPreload = async () => {
@@ -121,7 +123,6 @@ export default function ReaderShell({ chapterId, baseUrl }) {
     </div>
   )
 }
-
 
 
 
