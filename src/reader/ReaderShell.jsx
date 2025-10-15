@@ -3,7 +3,7 @@ import ReaderSplash from './ReaderSplash.jsx'
 import PageViewport from './PageViewport.jsx'
 import MusicRail from './MusicRail.jsx'
 import VoiceRail from './VoiceRail.jsx'
-import { createAudioEngine } from './AudioEngine.js'
+import { getAudioEngine } from './audioSingleton.js'
 import { useChapter } from './useChapter.js'
 import { getEntitlements, createCheckoutSession } from '../api/client.js'
 
@@ -25,13 +25,35 @@ export default function ReaderShell({ chapterId, baseUrl }) {
   const [paywall, setPaywall] = useState(null)
   const firedRef = useRef(new Set())
   const [audioReady, setAudioReady] = useState(false)
+  const [audioPrimed, setAudioPrimed] = useState(() => {
+    try { return sessionStorage.getItem("audioPrimed") === "1" } catch { return false }
+  })
   const [fontScale, setFontScale] = useState(1)
   const [textBtn, setTextBtn] = useState('none') // none | small | large
   const [theme, setTheme] = useState('light')
   const [bookmarked, setBookmarked] = useState(false)
+  const [bookmarks, setBookmarks] = useState([]) // array of page indexes
   const [overlayTab, setOverlayTab] = useState('none') // none | chapters | bookmark
   const [voiceVolume, setVoiceVolume] = useState(1)
   const overlayTapRef = useRef(0)
+
+  // Load persisted preferences once
+  useEffect(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem('reader:prefs') || '{}')
+      if (typeof p.musicVolume === 'number') setMusicVolume(Math.max(0, Math.min(1, p.musicVolume)))
+      if (typeof p.voiceVolume === 'number') setVoiceVolume(Math.max(0, Math.min(1, p.voiceVolume)))
+      if (typeof p.fontScale === 'number') setFontScale(Math.max(0.8, Math.min(1.6, p.fontScale)))
+      if (p.theme === 'dark' || p.theme === 'light') setTheme(p.theme)
+    } catch {}
+  }, [])
+
+  // Persist preferences on change (throttled by microtask is fine)
+  useEffect(() => {
+    try {
+      localStorage.setItem('reader:prefs', JSON.stringify({ musicVolume, voiceVolume, fontScale, theme }))
+    } catch {}
+  }, [musicVolume, voiceVolume, fontScale, theme])
 
   // Scope body mode
   useEffect(() => {
@@ -70,7 +92,7 @@ export default function ReaderShell({ chapterId, baseUrl }) {
   }, [chapterId])
 
   // Audio engine
-  useEffect(() => { engineRef.current = createAudioEngine() }, [])
+  useEffect(() => { engineRef.current = getAudioEngine() }, [])
   useEffect(() => { engineRef.current?.setMusicVolume(musicVolume) }, [musicVolume])
   useEffect(() => { engineRef.current?.setVoiceVolume?.(voiceVolume) }, [voiceVolume])
 
@@ -87,6 +109,11 @@ export default function ReaderShell({ chapterId, baseUrl }) {
     if (overlayOpen) setOverlayTab('none')
   }, [overlayOpen])
 
+  useEffect(() => {
+    const on = () => setAudioPrimed(true)
+    window.addEventListener("audio:primed", on)
+    return () => window.removeEventListener("audio:primed", on)
+  }, [])
   // Ensure audio context starts on first user gesture inside the reader
   useEffect(() => {
     const el = containerRef.current
@@ -112,6 +139,35 @@ export default function ReaderShell({ chapterId, baseUrl }) {
 
   // Load chapter via API/Mocks and compute pages
   const { loading, error, ast, pages } = useChapter({ taleId: 'tale1', chapterId, baseUrl })
+
+  // --- Bookmarks (per chapter) ---
+  const taleId = 'tale1'
+  const bmKey = `reader:bookmarks:${taleId}:${chapterId}`
+  const loadBookmarks = () => {
+    try {
+      const raw = localStorage.getItem(bmKey)
+      const arr = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : []
+      const uniq = Array.from(new Set(arr.map(n => Number(n)).filter(n => Number.isInteger(n) && n >= 0)))
+      uniq.sort((a,b) => a - b)
+      return uniq
+    } catch { return [] }
+  }
+  const persistBookmarks = (arr) => {
+    try { localStorage.setItem(bmKey, JSON.stringify(arr)) } catch {}
+  }
+  useEffect(() => { setBookmarks(loadBookmarks()) }, [chapterId])
+  useEffect(() => { setBookmarked(bookmarks.includes(pageIndex)) }, [bookmarks, pageIndex])
+  const toggleBookmarkCurrent = () => {
+    setBookmarks(prev => {
+      const has = prev.includes(pageIndex)
+      const next = has ? prev.filter(i => i !== pageIndex) : [...prev, pageIndex].sort((a,b)=>a-b)
+      persistBookmarks(next)
+      return next
+    })
+  }
+  const clearAllBookmarks = () => {
+    setBookmarks(() => { persistBookmarks([]); return [] })
+  }
 
   // Autoplay best-effort: dès que l'AST est chargé, tenter de lancer la première boucle
   useEffect(() => {
@@ -279,6 +335,57 @@ export default function ReaderShell({ chapterId, baseUrl }) {
     }
   }, [pageIndex, pages, ast, navDir, audioReady])
 
+  // Prefetch audio for current and next page to minimize latency
+  useEffect(() => {
+    const engine = engineRef.current
+    if (!engine || !ast?.triggers || !pages?.length) return
+    const uniq = new Set()
+    // Dynamic prefetch budget based on network conditions
+    let __pfBudget = 12
+    try {
+      const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection
+      if (conn?.saveData) __pfBudget = 4
+      else if (typeof conn?.effectiveType === 'string') {
+        const et = conn.effectiveType.toLowerCase()
+        if (et.includes('2g') || et.includes('slow-2g')) __pfBudget = 4
+        else if (et.includes('3g')) __pfBudget = 8
+      }
+    } catch {}
+    const add = (src) => {
+      if (!src) return
+      if (uniq.has(src)) return
+      if (uniq.size >= __pfBudget) return
+      uniq.add(src)
+      engine.prefetch?.(src)
+    }
+
+    const current = pages[Math.max(0, Math.min(pageIndex, pages.length - 1))]
+    const next = pages[Math.max(0, Math.min(pageIndex + 1, pages.length - 1))]
+    const curIds = new Set(current?.blocks?.map(b => b.id))
+    const nextIds = new Set(next?.blocks?.map(b => b.id))
+
+    for (const t of (ast.triggers || [])) {
+      if (!t?.src) continue
+      const at = String(t.at || '')
+      if (t.kind === 'sfx') {
+        // SFX de la page courante et suivante
+        if ((/^para:/i.test(at) || /^dialogue:/i.test(at))) {
+          const id = at.split(':')[1]
+          if (curIds.has(id) || nextIds.has(id)) add(t.src)
+        }
+      } else if (t.kind === 'voice') {
+        // Précharger voix associées aux dialogues visibles ou imminents
+        if (/^dialogue:/i.test(at)) {
+          const id = at.split(':')[1]
+          if (curIds.has(id) || nextIds.has(id)) add(t.src)
+        }
+      } else if (t.kind === 'cue') {
+        // Précharger toutes les boucles (le nombre est limité) pour des crossfades sans latence
+        add(t.src)
+      }
+    }
+  }, [ast, pages, pageIndex])
+
   return (
     <div className="reader" ref={containerRef}>
       {showSplash && splashData && (
@@ -303,6 +410,26 @@ export default function ReaderShell({ chapterId, baseUrl }) {
             <div className="reader__header-right" />
           </header>
           <main className="reader__stage">
+      {!audioPrimed && (
+        <div className="reader__audio-prompt" role="dialog" aria-live="polite">
+          <button
+            type="button"
+            onClick={async () => {
+              try { await engineRef.current?.ensureStarted() } catch {}
+              setAudioPrimed(true)
+            }}
+          >Activer le son</button>
+          <button
+            type="button"
+            style={{ marginLeft: 8 }}
+            onClick={async () => {
+              try { await engineRef.current?.ensureStarted() } catch {}
+              try { await engineRef.current?.playSfx?.('test-beep') } catch {}
+            }}
+            aria-label="Jouer un bip de test"
+          >Tester un bip</button>
+        </div>
+      )}
             {pages?.length > 0 && (
               <PageViewport
               key={pageIndex}
@@ -314,6 +441,7 @@ export default function ReaderShell({ chapterId, baseUrl }) {
               onSwipePrev={() => { setNavDir('prev'); setPageIndex(i => Math.max(i - 1, 0)) }}
               onDoubleTap={() => { setOverlayOpen(v => !v); engineRef.current?.ensureStarted() }}
               overlayOpen={overlayOpen}
+              onPrimeAudio={() => { engineRef.current?.ensureStarted() }}
               />
             )}
             {/* rails et boutons déplacés dans l'overlay */}
@@ -335,8 +463,9 @@ export default function ReaderShell({ chapterId, baseUrl }) {
                   <button
                     className={`reader__icon ${bookmarked ? 'is-on' : ''}`}
                     aria-pressed={bookmarked}
-                    onClick={() => setBookmarked(v => !v)}
-                    title="Marque‑page"
+                    onClick={toggleBookmarkCurrent}
+                    title={bookmarked ? "Retirer le marque-page" : "Ajouter un marque-page"}
+                    aria-label={bookmarked ? "Retirer le marque-page courant" : "Ajouter un marque-page sur cette page"}
                   >🔖</button>
                   <span className="reader__sep" aria-hidden>|</span>
                   <button
@@ -393,10 +522,32 @@ export default function ReaderShell({ chapterId, baseUrl }) {
               )}
               {overlayTab === 'bookmark' && (
                 <div className="reader__panel">
-                  <div className="reader__panel-title">Marque‑page</div>
+                  <div className="reader__panel-title">Marque-pages</div>
                   <div className="reader__panel-grid">
-                    {/* placeholder */}
-                    <div className="reader__cell is-current">{pageIndex+1}</div>
+                    {bookmarks.length === 0 && (
+                      <div className="reader__cell" style={{ opacity: 0.7, pointerEvents: 'none' }}>Aucun</div>
+                    )}
+                    {bookmarks.map((i) => (
+                      <button
+                        key={i}
+                        className={`reader__cell ${i===pageIndex?'is-current':''}`}
+                        onClick={() => { setPageIndex(i); setOverlayOpen(false); setOverlayTab('none') }}
+                        aria-label={`Aller à la page ${i+1}`}
+                      >{i+1}</button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'space-between' }}>
+                    <button
+                      className={`reader__pill ${bookmarked ? 'is-active' : ''}`}
+                      onClick={toggleBookmarkCurrent}
+                      aria-label={bookmarked ? 'Retirer le marque-page courant' : 'Ajouter un marque-page sur cette page'}
+                    >{bookmarked ? 'Retirer le courant' : 'Ajouter la page courante'}</button>
+                    {bookmarks.length > 0 && (
+                      <button
+                        className="reader__pill"
+                        onClick={() => { if (confirm('Supprimer tous les marque-pages de ce chapitre ?')) clearAllBookmarks() }}
+                      >Tout effacer</button>
+                    )}
                   </div>
                 </div>
               )}
@@ -428,6 +579,7 @@ export default function ReaderShell({ chapterId, baseUrl }) {
     </div>
   )
 }
+
 
 
 

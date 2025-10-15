@@ -1,7 +1,9 @@
 ﻿import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import react from '@vitejs/plugin-react-swc';
 
 export default defineConfig({
+  appType: 'spa',
+  assetsInclude: ['**/*.mp3','**/*.ogg','**/*.wav','**/*.svg'],
   base: '/Hub-de-fou-2/', // match GitHub repository name for Pages deploy
   plugins: [react()],
   root: 'src',

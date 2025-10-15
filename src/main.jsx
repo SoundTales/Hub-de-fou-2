@@ -2,6 +2,7 @@
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './styles.css';
+import './gesturePrime.js';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {

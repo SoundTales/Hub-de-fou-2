@@ -2,273 +2,212 @@ export function createAudioEngine() {
   let ctx = null
   let master = null, music = null, sfx = null, voice = null
   let desiredMusic = 0.8
-  let bufferCache = new Map()
-  // music cue handling
-  let currentMusicSrc = null
-  let currentMusicSource = null
-  let currentMusicSourceGain = null
-  let currentMusicEl = null
+  const bufferCache = new Map()
+  const lru = []
+  const MAX_BUFFERS = 16
+  const METRIC_WINDOW = 100
+  const metrics = {
+    fetchMs: { cue: [], sfx: [], voice: [], prefetch: [] },
+    decodeMs: { cue: [], sfx: [], voice: [], prefetch: [] },
+    htmlStartMs: { cue: [], sfx: [], voice: [], prefetch: [] },
+  }
+  const pushMetric = (bucket, category, ms) => {
+    try {
+      const arr = (metrics[bucket] && metrics[bucket][category])
+      if (!arr) return
+      arr.push(ms)
+      if (arr.length > METRIC_WINDOW) arr.splice(0, arr.length - METRIC_WINDOW)
+      // periodic log
+      if (arr.length % 10 === 0) {
+        const sorted = [...arr].sort((a,b)=>a-b)
+        const p95 = sorted[Math.max(0, Math.min(sorted.length - 1, Math.floor(sorted.length*0.95)))]
+        console.log(`[Audio][p95] ${bucket}/${category}: ${Math.round(p95)}ms (n=${arr.length})`)
+      }
+    } catch {}
+  }
 
   const ensureContext = async () => {
-    console.log('ensureContext appelé, ctx actuel:', ctx?.state)
     if (!ctx) {
-      try {
-        ctx = new (window.AudioContext || window.webkitAudioContext)()
-        console.log('Nouveau AudioContext créé, état:', ctx.state)
-        
-        master = ctx.createGain()
-        music = ctx.createGain()
-        sfx = ctx.createGain()
-        voice = ctx.createGain()
-        
-        music.gain.value = desiredMusic
-        sfx.gain.value = 1
-        voice.gain.value = 1
-        master.gain.value = 1
-        
-        music.connect(master)
-        sfx.connect(master)
-        voice.connect(master)
-        master.connect(ctx.destination)
-        
-        console.log('Chaîne audio configurée')
-      } catch (err) {
-        console.error('Erreur création AudioContext:', err)
-        throw err
-      }
+      ctx = new (window.AudioContext || window.webkitAudioContext)()
+      master = ctx.createGain()
+      music = ctx.createGain()
+      sfx = ctx.createGain()
+      voice = ctx.createGain()
+      music.gain.value = desiredMusic
+      sfx.gain.value = 1
+      voice.gain.value = 1
+      music.connect(master)
+      sfx.connect(master)
+      voice.connect(master)
+      master.connect(ctx.destination)
     }
-    
     if (ctx.state === 'suspended') {
-      console.log('AudioContext suspendu, tentative de reprise...')
-      try { 
-        await ctx.resume()
-        console.log('AudioContext repris, nouvel état:', ctx.state)
-      } catch (err) {
-        console.error('Erreur reprise AudioContext:', err)
-        throw err
-      }
+      try { await ctx.resume() } catch {}
     }
   }
 
-  const fetchBuffer = async (url) => {
+  const fetchBuffer = async (url, { category = 'prefetch' } = {}) => {
     await ensureContext()
     if (bufferCache.has(url)) return bufferCache.get(url)
-    const res = await fetch(url)
+    const t0 = performance.now()
+    const res = await fetch(url, { mode: 'cors' })
     const arr = await res.arrayBuffer()
+    const t1 = performance.now()
     const buf = await ctx.decodeAudioData(arr)
+    const t2 = performance.now()
+    pushMetric('fetchMs', category, t1 - t0)
+    pushMetric('decodeMs', category, t2 - t1)
     bufferCache.set(url, buf)
+    lru.push(url)
+    if (lru.length > MAX_BUFFERS) {
+      const old = lru.shift()
+      if (old && old !== url) bufferCache.delete(old)
+    }
     return buf
+  }
+
+  // Music cue crossfade
+  let currentMusicSrc = null
+  let currentMusicSource = null
+  let currentMusicGain = null
+  let currentMusicEl = null
+
+  // Lightweight oscillator beep (no network)
+  const playBeep = async (targetNode = sfx, { ms = 180, freq = 880, gain = 0.2 } = {}) => {
+    await ensureContext()
+    const osc = ctx.createOscillator()
+    const g = ctx.createGain()
+    osc.frequency.value = freq
+    g.gain.value = 0
+    osc.connect(g)
+    g.connect(targetNode)
+    const now = ctx.currentTime
+    g.gain.setValueAtTime(0, now)
+    g.gain.linearRampToValueAtTime(gain, now + 0.01)
+    g.gain.linearRampToValueAtTime(0.0001, now + ms / 1000)
+    osc.start(now)
+    osc.stop(now + ms / 1000 + 0.02)
+    return new Promise(res => osc.addEventListener('ended', () => res(), { once: true }))
   }
 
   const setCue = async (src, { fadeMs = 220, loop = true } = {}) => {
     if (!src) return
     await ensureContext()
-    if (currentMusicSrc === src && currentMusicSource) return
+    if (currentMusicSrc === src && (currentMusicSource || currentMusicEl)) return
+    // If context is not allowed yet, fallback HTMLAudio immediately
+    if (ctx.state !== 'running') {
+      try {
+        const el = new Audio(src)
+        try { el.crossOrigin = 'anonymous' } catch {}
+        el.loop = !!loop
+        el.volume = Math.max(0, Math.min(1, desiredMusic))
+        const t0 = performance.now()
+        await el.play()
+        pushMetric('htmlStartMs', 'cue', performance.now() - t0)
+        if (currentMusicEl) { try { currentMusicEl.pause(); currentMusicEl.src = '' } catch {} }
+        currentMusicEl = el
+        if (currentMusicSource) { try { currentMusicSource.stop() } catch {} }
+        currentMusicSource = null
+        currentMusicGain = null
+        currentMusicSrc = src
+        return
+      } catch {}
+    }
     try {
-      const buf = await fetchBuffer(src)
-      // new source
+      const buf = await fetchBuffer(src, { category: 'cue' })
       const source = ctx.createBufferSource()
       source.buffer = buf
       source.loop = !!loop
-      const gain = ctx.createGain()
-      gain.gain.value = 0
-      source.connect(gain)
-      gain.connect(music)
+      const gain = ctx.createGain(); gain.gain.value = 0
+      source.connect(gain); gain.connect(music)
       const now = ctx.currentTime
-      // fade in new source
-      gain.gain.cancelScheduledValues(now)
       gain.gain.setValueAtTime(0, now)
       gain.gain.linearRampToValueAtTime(1, now + fadeMs / 1000)
       source.start()
-      // fade out old source if exists
-      if (currentMusicSource && currentMusicSourceGain) {
-        currentMusicSourceGain.gain.cancelScheduledValues(now)
-        currentMusicSourceGain.gain.setValueAtTime(currentMusicSourceGain.gain.value, now)
-        currentMusicSourceGain.gain.linearRampToValueAtTime(0, now + fadeMs / 1000)
+      if (currentMusicGain && currentMusicSource) {
+        currentMusicGain.gain.cancelScheduledValues(now)
+        currentMusicGain.gain.setValueAtTime(currentMusicGain.gain.value, now)
+        currentMusicGain.gain.linearRampToValueAtTime(0, now + fadeMs / 1000)
         try { currentMusicSource.stop(now + fadeMs / 1000 + 0.02) } catch {}
       }
-      if (currentMusicEl) {
-        try { currentMusicEl.pause(); currentMusicEl.src = '' } catch {}
-        currentMusicEl = null
-      }
+      if (currentMusicEl) { try { currentMusicEl.pause(); currentMusicEl.src = '' } catch {}; currentMusicEl = null }
       currentMusicSource = source
-      currentMusicSourceGain = gain
+      currentMusicGain = gain
       currentMusicSrc = src
     } catch (e) {
-      console.warn('AudioEngine setCue failed, fallback to HTMLAudio', e)
+      // fallback
       try {
-        // fallback element
         const el = new Audio(src)
+        try { el.crossOrigin = 'anonymous' } catch {}
         el.loop = !!loop
         el.volume = Math.max(0, Math.min(1, desiredMusic))
+        const t0 = performance.now()
         await el.play()
+        pushMetric('htmlStartMs', 'cue', performance.now() - t0)
         if (currentMusicEl) { try { currentMusicEl.pause(); currentMusicEl.src = '' } catch {} }
         currentMusicEl = el
-        // stop WebAudio source if any
         if (currentMusicSource) { try { currentMusicSource.stop() } catch {} }
         currentMusicSource = null
-        currentMusicSourceGain = null
+        currentMusicGain = null
         currentMusicSrc = src
-      } catch (e2) {
-        console.warn('AudioEngine HTMLAudio cue failed', e2)
-      }
+      } catch {}
     }
   }
 
   const playSfx = async (src) => {
     if (!src) return
     await ensureContext()
+    if (src === 'test-beep') { try { await playBeep(sfx) } catch {}; return }
+    if (ctx.state !== 'running') {
+      try { const el = new Audio(src); try { el.crossOrigin = 'anonymous' } catch {}; const t0 = performance.now(); await el.play(); pushMetric('htmlStartMs','sfx',performance.now()-t0); return } catch {}
+    }
     try {
-      const buf = await fetchBuffer(src)
-      const node = ctx.createBufferSource()
-      node.buffer = buf
-      node.connect(sfx)
-      node.start()
+      const buf = await fetchBuffer(src, { category: 'sfx' })
+      const node = ctx.createBufferSource(); node.buffer = buf
+      node.connect(sfx); node.start()
     } catch (e) {
-      console.warn('AudioEngine playSfx failed, fallback to HTMLAudio', e)
-      try { const el = new Audio(src); await el.play() } catch (e2) { console.warn('HTMLAudio SFX failed', e2) }
+      try { const el = new Audio(src); try { el.crossOrigin = 'anonymous' } catch {}; const t0 = performance.now(); await el.play(); pushMetric('htmlStartMs','sfx',performance.now()-t0) } catch {}
     }
   }
 
   const playVoice = async (src, { duckDb = 0.5, releaseMs = 480 } = {}) => {
-    console.log('=== AudioEngine playVoice ===')
-    console.log('src:', src)
-    console.log('ctx état avant:', ctx?.state)
-    
-    if (!src) {
-      console.warn('Pas de src fourni')
-      return
-    }
-    
+    if (!src) return
     await ensureContext()
-    console.log('ctx état après ensureContext:', ctx?.state)
-    
-    // Si c'est un son de test, créer un bip synthétisé
-    if (src === 'test-beep' || src.includes('test-beep')) {
-      console.log('=== Génération bip de test ===')
-      try {
-        const oscillator = ctx.createOscillator()
-        const gainNode = ctx.createGain()
-        
-        oscillator.connect(gainNode)
-        gainNode.connect(voice)
-        
-        oscillator.frequency.value = 800
-        oscillator.type = 'sine'
-        
-        const now = ctx.currentTime
-        gainNode.gain.setValueAtTime(0.3, now)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5)
-        
-        oscillator.start(now)
-        oscillator.stop(now + 0.5)
-        
-        console.log('Bip de test programmé et démarré')
-        
-        // Attendre que le son se termine
-        return new Promise(resolve => {
-          setTimeout(() => {
-            console.log('Bip de test terminé')
-            resolve()
-          }, 600)
-        })
-      } catch (e) {
-        console.error('Échec du bip de test:', e)
-        throw e
-      }
+    if (src === 'test-beep') { try { await playBeep(voice) } catch {}; return }
+    if (ctx.state !== 'running') {
+      try { const el = new Audio(src); try { el.crossOrigin = 'anonymous' } catch {}; const t0 = performance.now(); await el.play(); pushMetric('htmlStartMs','voice',performance.now()-t0); return } catch {}
     }
-    
-    // Pour les vrais fichiers audio
     try {
-      console.log('Tentative de chargement du fichier audio:', src)
-      const buf = await fetchBuffer(src)
-      console.log('Buffer audio chargé, durée:', buf.duration)
-      
-      const node = ctx.createBufferSource()
-      node.buffer = buf
+      const buf = await fetchBuffer(src, { category: 'voice' })
+      const node = ctx.createBufferSource(); node.buffer = buf
       node.connect(voice)
-      
-      // Réduction du volume de la musique de fond
       const now = ctx.currentTime
       const orig = desiredMusic
       if (music && music.gain) {
         music.gain.cancelScheduledValues(now)
         music.gain.setTargetAtTime(orig * duckDb, now, 0.05)
-        console.log('Musique réduite pour dialogue')
       }
-      
       node.start(now)
-      console.log('Audio de voix démarré')
-      
       node.addEventListener('ended', () => {
         const t = ctx.currentTime
         if (music && music.gain) {
           music.gain.cancelScheduledValues(t)
           music.gain.setTargetAtTime(orig, t, Math.max(0.05, releaseMs / 1000))
-          console.log('Musique restaurée après dialogue')
         }
       }, { once: true })
-      
-      // Retourner une promesse qui se résout quand l'audio se termine
-      return new Promise(resolve => {
-        node.addEventListener('ended', resolve, { once: true })
-      })
-      
     } catch (e) {
-      console.warn('AudioEngine playVoice échoué, tentative HTMLAudio:', e)
-      try { 
-        const el = new Audio(src)
-        el.volume = 0.8
-        console.log('HTMLAudio créé, tentative de lecture...')
-        await el.play()
-        console.log('HTMLAudio en cours de lecture')
-        return new Promise(resolve => {
-          el.addEventListener('ended', resolve, { once: true })
-        })
-      } catch (e2) { 
-        console.error('HTMLAudio échoué aussi:', e2)
-        // Dernier recours : bip synthétisé
-        console.log('=== Bip de secours ===')
-        try {
-          const oscillator = ctx.createOscillator()
-          const gainNode = ctx.createGain()
-          
-          oscillator.connect(gainNode)
-          gainNode.connect(voice)
-          
-          oscillator.frequency.value = 600
-          oscillator.type = 'triangle'
-          
-          const now = ctx.currentTime
-          gainNode.gain.setValueAtTime(0.2, now)
-          gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3)
-          
-          oscillator.start(now)
-          oscillator.stop(now + 0.3)
-          
-          console.log('Bip de secours programmé')
-          
-          return new Promise(resolve => {
-            setTimeout(resolve, 400)
-          })
-        } catch (e3) {
-          console.error('Tous les méthodes de lecture audio ont échoué:', e3)
-          throw e3
-        }
-      }
+      try { const el = new Audio(src); try { el.crossOrigin = 'anonymous' } catch {}; const t0 = performance.now(); await el.play(); pushMetric('htmlStartMs','voice',performance.now()-t0) } catch {}
     }
   }
 
   return {
-    async ensureStarted() { 
-      await ensureContext()
-      console.log('Engine démarré, état final:', ctx?.state)
-    },
+    async ensureStarted() { await ensureContext(); try { sessionStorage.setItem('audioPrimed','1'); sessionStorage.setItem('audioPrimedAt', String(Date.now())) } catch {} },
     async setCue(src, opts) { await setCue(src, opts) },
     async playSfx(src) { await playSfx(src) },
     async playVoice(src, opts) { await playVoice(src, opts) },
     setMusicVolume(v) { desiredMusic = Math.max(0, Math.min(1, v)); if (music) music.gain.value = desiredMusic },
     setVoiceVolume(v) { if (voice) voice.gain.value = Math.max(0, Math.min(1, v)) },
+    async prefetch(url) { try { await fetchBuffer(url, { category: 'prefetch' }) } catch {} },
     get state() { return ctx?.state || 'idle' },
     get nodes() { return { ctx, master, music, sfx, voice } }
   }

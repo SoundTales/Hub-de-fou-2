@@ -1,6 +1,6 @@
 ﻿import { useEffect, useRef, useState } from 'react'
 
-function Dialogue({ block, read, onTap }) {
+function Dialogue({ block, read, onTap, onPrime }) {
   const tRef = useRef(null)
   
   // Gestionnaire de clic principal pour les dialogues
@@ -9,6 +9,7 @@ function Dialogue({ block, read, onTap }) {
     console.log('Dialogue cliqué dans PageViewport:', block.id, block.speaker)
     onTap?.(block.id)
   }
+  const handlePointerDown = () => { try { onPrime?.() } catch {} }
   
   // long-press placeholder
   useEffect(() => {
@@ -29,6 +30,7 @@ function Dialogue({ block, read, onTap }) {
       ref={tRef} 
       className={`dlg ${read ? 'dlg--read' : ''}`} 
       onClick={handleClick}
+      onPointerDown={handlePointerDown}
       style={{ cursor: 'pointer' }}
       role="button"
       tabIndex={0}
@@ -42,7 +44,7 @@ function Dialogue({ block, read, onTap }) {
   )
 }
 
-export default function PageViewport({ page, dir = 'next', readDialogIds, onDialogueTap, onSwipeNext, onSwipePrev, onDoubleTap, overlayOpen }) {
+export default function PageViewport({ page, dir = 'next', readDialogIds, onDialogueTap, onSwipeNext, onSwipePrev, onDoubleTap, overlayOpen, onPrimeAudio }) {
   const ref = useRef(null)
   const [entering, setEntering] = useState(true)
   
@@ -114,9 +116,8 @@ export default function PageViewport({ page, dir = 'next', readDialogIds, onDial
       {page?.blocks.map(b => b.type === 'para' ? (
         <p key={b.id} className="para">{b.text}</p>
       ) : (
-        <Dialogue key={b.id} block={b} read={readDialogIds?.has(b.id)} onTap={onDialogueTap} />
+        <Dialogue key={b.id} block={b} read={readDialogIds?.has(b.id)} onTap={onDialogueTap} onPrime={onPrimeAudio} />
       ))}
     </section>
   )
 }
-

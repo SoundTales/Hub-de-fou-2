@@ -6,15 +6,17 @@ export async function getChapterAst(taleId, chapterId, options = {}) {
 }
 
 export async function getEntitlements() {
-  // Mock entitlements - tout débloqué pour le dev
+  // Mock entitlements – partiel pour démonstration des chapitres verrouillés
+  // - tale1: seuls les chapitres 1 et 2 sont déverrouillés
+  // - tale2: seul le chapitre 1 est déverrouillé
   return {
     chapters: {
       'tale1:1': true,
       'tale1:2': true,
-      'tale1:3': true
+      'tale2:1': true
     },
     tales: {
-      'tale1': true
+      // pas de déverrouillage global, pour laisser s'afficher les 🔒
     }
   }
 }
@@ -24,3 +26,53 @@ export async function createCheckoutSession({ chapterId, taleId }) {
   console.warn('Mock checkout session pour', { chapterId, taleId })
   return 'https://example.com/mock-checkout'
 }
+
+export async function getTales(options = {}) {
+  // Essaie une API, puis JSON mock, puis inline
+  const withBase = (p) => {
+    try {
+      const b = options?.baseUrl || (import.meta?.env?.BASE_URL || '/')
+      return `${b.endsWith('/') ? b : b + '/'}${p.replace(/^\/?/, '')}`
+    } catch { return p }
+  }
+  const tryFetchMany = async (urls) => {
+    for (const url of urls) {
+      try {
+        const res = await fetch(url)
+        if (!res.ok) continue
+        return await res.json()
+      } catch {}
+    }
+    throw new Error('Tales not found')
+  }
+  try {
+    const res = await fetch('/api/tales', { credentials: 'include' })
+    if (res.ok) return await res.json()
+  } catch {}
+  try {
+    return await tryFetchMany([
+      withBase('mock/tales.json'),
+      '/mock/tales.json',
+      'mock/tales.json'
+    ])
+  } catch {}
+  // Inline minimal (fallback ultime)
+  const chapters = Array.from({ length: 12 }, (_, i) => ({ id: String(i + 1), title: `Chapitre ${i + 1}` }))
+  return {
+    tales: [
+      {
+        id: 'tale1',
+        title: 'OSRASE',
+        cover: 'https://picsum.photos/800/450?random=101',
+        chapters
+      },
+      {
+        id: 'tale2',
+        title: 'NEBULA',
+        cover: 'https://picsum.photos/800/450?random=202',
+        chapters: Array.from({ length: 8 }, (_, i) => ({ id: String(i + 1), title: `Chapitre ${i + 1}` }))
+      }
+    ]
+  }
+}
+

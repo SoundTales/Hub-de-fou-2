@@ -190,3 +190,47 @@ Ce dépôt contient le hub de lecture OSRASE (React + Vite) et prépare la liseu
 - Paiement: Stripe Checkout + webhook; jamais débloquer côté client sans entitlement.
 - Routes: hub par défaut, lecteur /#/reader/:chapterId; scoper comportements via ody[data-mode].
 - Transitions: entrée lecteur en fade; pages en slide/fade léger selon direction.
+
+## Chat Handoff – Session Courante (Audio/Overlay/Tech)
+
+Ce bloc résume les décisions prises et le système audio/overlay en place pour faciliter la reprise dans un nouveau chat.
+
+- Audio – Politique globale
+  - Moteur unique: AudioEngine singleton partagé hub/liseuse (pas de multiples AudioContext).
+  - Prime global: `gesturePrime` écoute le premier `pointerdown|touchstart|keydown` et appelle `engine.ensureStarted()`. Marque `sessionStorage.audioPrimed=1`.
+  - Hub: garder le son du splash; on prime l’audio dans la même chaîne du geste (clic carte et gate) avant plein écran/navigation.
+  - Liseuse: si non primé (deep‑link), afficher un prompt « Activer le son » cliquable; premier geste prime l’audio et le prompt disparaît.
+  - Fallback: si Web Audio n’est pas « running », `setCue`/`playSfx`/`playVoice` basculent en HTMLAudio (crossOrigin=anonymous) puis reviennent à Web Audio dès prime.
+  - CORS/CDN: `fetch(url, { mode:'cors' })`, HTMLAudio `crossOrigin='anonymous'` requis; assets versionnés et servables via CDN.
+
+- Déclenchement audio (AST/Triggers)
+  - Boucles d’ambiance (cues): démarrent à l’entrée du chapitre; crossfade 200–300 ms à l’entrée de certaines pages/ancres; conserver la boucle en arrière.
+  - SFX: tirés automatiquement à l’entrée des pages/blocs (en avant uniquement) avec anti‑retrigger.
+  - Voix: lecture au tap sur le dialogue uniquement (onPointerDown → prime, onClick → playVoice avec ducking musique ~−6 dB, release 300–600 ms).
+  - AST attendu: `kind = 'cue' | 'sfx' | 'voice'`, `at = 'progress:<n>' | 'para:<id>' | 'dialogue:<id>'`, `src`, `loop?`.
+
+- Préchargement et mémoire
+  - Prefetch courant + page suivante (SFX/voix) et toutes les boucles; LRU local (éviction au‑delà d’un seuil) pour limiter la RAM.
+
+- Overlay et UI lecteur
+  - Tous les contrôles dans l’overlay (double‑tap hors dialogues pour ouvrir/fermer):
+    - Haut‑droite: boutons texte B/A+/Aa (toggle), dessous: Nuit/Jour.
+    - Droite: rails verticaux superposés (🎵 musique au‑dessus, 💬 voix dessous).
+    - Bas/dock: « MARQUE‑PAGE » et « CHAPITRAGE » (mutuellement exclusifs); carrousel/panneau n’apparaît que si le bouton est actif.
+
+- Navigation lecteur
+  - Sans scroll; swipe droite/gauche pour naviguer; dialogues cliquables; anti‑retrigger en arrière.
+
+- Hub/liseuse – séparation
+  - Hub = route par défaut; liseuse = `/#/reader/:chapterId`; scoper via `body[data-mode]`.
+  - Bannières in‑app: full → compact (après 1ère action) sur hub; jamais en liseuse.
+
+- Tech stack / Build
+  - Vite 6.4 + `@vitejs/plugin-react-swc` + React 18.3; `appType: 'spa'`; `assetsInclude` pour audio/svg.
+  - Preconnect CDN ajouté dans `src/index.html` (remplacer `https://cdn.example.com`).
+
+- À faire côté serveur (rappel)
+  - Stripe Checkout + webhook → entitlements serveur; URLs signées pour AST/médias payants; endpoints `GET /api/tales`, `GET /api/chapters/:taleId/:chapterId`, `GET /api/me/entitlements`.
+
+- À continuer côté client
+  - Persistance marque‑pages; hub dynamique via `getTales()`; réglages prompt audio/typo/volumes persistés; peaufinage prefetch/LRU et logs p95 fetch/decode.

@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import ReaderShell from './reader/ReaderShell.jsx'
+import { getAudioEngine } from './reader/audioSingleton.js'
+import { getTales, getEntitlements } from './api/client.js'
 
 export default function App() {
   const eyebrowRef = useRef(null)
@@ -14,6 +16,10 @@ export default function App() {
   const [isInApp, setIsInApp] = useState(false)
   const [bannerMode, setBannerMode] = useState('hidden')
   const [isFullscreen, setIsFullscreen] = useState(() => !!(document.fullscreenElement || document.webkitFullscreenElement))
+  // Hub data
+  const [tales, setTales] = useState([])
+  const [ents, setEnts] = useState(null)
+  const [loadingTales, setLoadingTales] = useState(true)
 
   // Simple hash-based routing to isolate the reader from the hub
   const [route, setRoute] = useState(() => window.location.hash || '#/')
@@ -22,6 +28,26 @@ export default function App() {
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
+
+  // Load tales + entitlements (mock)
+  useEffect(() => {
+    let alive = true
+    const load = async () => {
+      try {
+        const [t, e] = await Promise.all([
+          getTales({ baseUrl }).catch(() => ({ tales: [] })),
+          getEntitlements().catch(() => null)
+        ])
+        if (!alive) return
+        setTales(Array.isArray(t?.tales) ? t.tales : [])
+        setEnts(e)
+      } finally {
+        if (alive) setLoadingTales(false)
+      }
+    }
+    load()
+    return () => { alive = false }
+  }, [baseUrl])
   const isReaderRoute = /^#\/?reader\//i.test(route)
 
   useEffect(() => {
@@ -255,7 +281,7 @@ export default function App() {
     }
     
     // Don't await here to preserve user gesture chain for audio
-    enterFullscreen()
+    try { getAudioEngine().ensureStarted() } catch {} ; enterFullscreen()
     let finished = false
     const finish = () => {
       if (finished) return
@@ -349,9 +375,9 @@ export default function App() {
         <button
           className="fs-btn"
           type="button"
-          aria-label={isFullscreen ? 'Quitter le plein écran' : 'Activer le plein écran'}
+          aria-label={isFullscreen ? 'Quitter le plein Ã©cran' : 'Activer le plein Ã©cran'}
           onClick={isFullscreen ? exitFullscreen : enterFullscreen}
-          title={isFullscreen ? 'Quitter le plein écran' : 'Activer le plein écran'}
+          title={isFullscreen ? 'Quitter le plein Ã©cran' : 'Activer le plein Ã©cran'}
         >
           {isFullscreen ? (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -372,7 +398,7 @@ export default function App() {
       )}
       {isInApp && bannerMode === 'full' && (
         <div className="iab-banner" role="region" aria-label="Ouvrir dans le navigateur">
-          <p className="iab-text">Pour profiter du plein écran, lancez la liseuse dans votre navigateur préféré.</p>
+          <p className="iab-text">Pour profiter du plein Ã©cran, lancez la liseuse dans votre navigateur prÃ©fÃ©rÃ©.</p>
           <div className="iab-actions">
             <button className="iab-btn" type="button" onClick={openInBrowser}>Ouvrir dans le navigateur</button>
             <button className="iab-btn iab-btn--ghost" type="button" onClick={copyLink}>Copier le lien</button>
@@ -404,7 +430,21 @@ export default function App() {
 
           {/* Actions (CTA + bookmark) */}
           <div className="hero__actions" ref={actionsRef}>
-            <button className="hero__cta" type="button">LIRE LE TALE</button>
+            <button className="hero__cta" type="button"
+              onClick={() => {
+                try { getAudioEngine().ensureStarted() } catch {}
+                const primary = tales?.[0]
+                const taleId = primary?.id || 'tale1'
+                let last = null
+                try { last = localStorage.getItem(`reader:progress:${taleId}`) } catch {}
+                const firstChapter = primary?.chapters?.[0]?.id || '1'
+                const chapterId = String(last || firstChapter)
+                const img = primary?.cover || `https://picsum.photos/800/450?random=${chapterId}`
+                const payload = { id: String(chapterId), img, title: primary?.title || 'OSRASE' }
+                try { sessionStorage.setItem('reader:splash', JSON.stringify(payload)) } catch {}
+                window.location.hash = `#/reader/${chapterId}`
+              }}
+            >{(() => { const primary = tales?.[0]; const taleId = primary?.id || 'tale1'; try { return localStorage.getItem(`reader:progress:${taleId}`) ? 'Reprendre le tale' : 'LIRE LE TALE' } catch { return 'LIRE LE TALE' } })()}</button>
             <button className="hero__bookmark" type="button" aria-label="Ajouter aux favoris">
               <svg className="hero__bookmark-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1z" />
@@ -414,47 +454,49 @@ export default function App() {
         </div>
       </header>
 
-      <main className="gallery">
-        {Array.from({ length: 22 }, (_, i) => (
-          <article
-            key={i + 1}
-            className="card"
-            role="button"
-            tabIndex={0}
-            onClick={() => {
-              const img = `https://picsum.photos/800/450?random=${i + 1}`
-              const payload = { id: String(i + 1), img, title: 'Ã€ JAMAIS, POUR TOUJOURS' }
-              try { sessionStorage.setItem('reader:splash', JSON.stringify(payload)) } catch {}
-              window.location.hash = `#/reader/${i + 1}`
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                const img = `https://picsum.photos/800/450?random=${i + 1}`
-                const payload = { id: String(i + 1), img, title: 'Ã€ JAMAIS, POUR TOUJOURS' }
+            <main className="gallery" aria-busy={loadingTales}>
+        {(loadingTales ? Array.from({ length: 6 }) : (tales?.[0]?.chapters || [])).map((ch, idx) => {
+          const chapterId = String(ch?.id || idx + 1)
+          const tale = tales?.[0]
+          const taleId = tale?.id || 'tale1'
+          const unlocked = !!(ents?.tales?.[taleId] || ents?.chapters?.[`${taleId}:${chapterId}`])
+          const label = ch?.title || `Chapitre ${chapterId}`
+          const img = tale?.cover || `https://picsum.photos/800/450?random=${chapterId}`
+          return (
+            <article
+              key={chapterId}
+              className={`card ${loadingTales ? "card--skeleton" : ""}` }
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                try { getAudioEngine().ensureStarted() } catch {}
+                const payload = { id: chapterId, img, title: tale?.title || 'OSRASE' }
                 try { sessionStorage.setItem('reader:splash', JSON.stringify(payload)) } catch {}
-                window.location.hash = `#/reader/${i + 1}`
-              }
-            }}
-          >
-            <h2 className="card__label">Resignation</h2>
-            <div
-              className="card__media"
-              style={{
-                backgroundImage: `url('https://picsum.photos/800/450?random=${i + 1}')`
+                window.location.hash = `#/reader/${chapterId}`
               }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault();
+                try { getAudioEngine().ensureStarted() } catch {}
+                const payload = { id: chapterId, img, title: tale?.title || 'OSRASE' }
+                try { sessionStorage.setItem('reader:splash', JSON.stringify(payload)) } catch {}
+                window.location.hash = `#/reader/${chapterId}`
+              }}}
             >
-              <div className="card__overlay"></div>
-              <span className="card__badge">{i + 1}</span>
-            </div>
-          </article>
-        ))}
+              <h2 className="card__label">{label}</h2>
+              <div
+                className="card__media"
+                style={{ backgroundImage: `url('${img}')` }}
+              >
+                <div className="card__overlay"></div>
+                <span className="card__badge">{unlocked ? chapterId : '🔒'}</span>
+              </div>
+            </article>
+          )
+        })}
       </main>
-
       {showGate && (
         <div className={`gate ${gateState === 'starting' ? 'is-starting' : ''} ${gateState === 'finishing' ? 'is-finishing' : ''}`}>
           <button className="gate__hit" aria-label="Lancer la liseuse" onClick={startGate}>
-            <span className="gate__msg">Touchez l’écran pour lancer la liseuse</span>
+            <span className="gate__msg">Touchez lâ€™Ã©cran pour lancer la liseuse</span>
             {/* Try multiple paths for the logo */}
             <img 
               className="gate__logo" 
@@ -487,6 +529,9 @@ export default function App() {
     </div>
   )
 }
+
+
+
 
 
 

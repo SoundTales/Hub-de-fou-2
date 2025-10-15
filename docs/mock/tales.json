@@ -3,12 +3,36 @@
     {
       "id": "tale1",
       "title": "OSRASE",
-      "cover": "/mock/covers/tale1.jpg",
+      "cover": "https://picsum.photos/800/450?random=101",
       "chapters": [
-        { "id": "1", "title": "Chapitre 1", "paywalled": false },
-        { "id": "2", "title": "Chapitre 2", "paywalled": true }
+        { "id": "1", "title": "Chapitre 1" },
+        { "id": "2", "title": "Chapitre 2" },
+        { "id": "3", "title": "Chapitre 3" },
+        { "id": "4", "title": "Chapitre 4" },
+        { "id": "5", "title": "Chapitre 5" },
+        { "id": "6", "title": "Chapitre 6" },
+        { "id": "7", "title": "Chapitre 7" },
+        { "id": "8", "title": "Chapitre 8" },
+        { "id": "9", "title": "Chapitre 9" },
+        { "id": "10", "title": "Chapitre 10" },
+        { "id": "11", "title": "Chapitre 11" },
+        { "id": "12", "title": "Chapitre 12" }
+      ]
+    },
+    {
+      "id": "tale2",
+      "title": "NEBULA",
+      "cover": "https://picsum.photos/800/450?random=202",
+      "chapters": [
+        { "id": "1", "title": "Chapitre 1" },
+        { "id": "2", "title": "Chapitre 2" },
+        { "id": "3", "title": "Chapitre 3" },
+        { "id": "4", "title": "Chapitre 4" },
+        { "id": "5", "title": "Chapitre 5" },
+        { "id": "6", "title": "Chapitre 6" },
+        { "id": "7", "title": "Chapitre 7" },
+        { "id": "8", "title": "Chapitre 8" }
       ]
     }
   ]
 }
-
