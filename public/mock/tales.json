@@ -1,0 +1,14 @@
+{
+  "tales": [
+    {
+      "id": "tale1",
+      "title": "OSRASE",
+      "cover": "/mock/covers/tale1.jpg",
+      "chapters": [
+        { "id": "1", "title": "Chapitre 1", "paywalled": false },
+        { "id": "2", "title": "Chapitre 2", "paywalled": true }
+      ]
+    }
+  ]
+}
+

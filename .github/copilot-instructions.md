@@ -1,4 +1,4 @@
-# Copilot Instructions — Hub-de-fou-2
+﻿# Copilot Instructions — Hub-de-fou-2
 
 Ce dépôt contient le hub de lecture OSRASE (React + Vite) et prépare la liseuse numérique. Ces consignes alignent Copilot avec les intentions produit et les contraintes mobiles/in‑app.
 
@@ -176,3 +176,17 @@ Ce dépôt contient le hub de lecture OSRASE (React + Vite) et prépare la liseu
 - CSS/JS:
   - Préfixer les classes/portées de la liseuse (`.reader-…`) et n’appliquer les règles globales (ex: `touch-action: none`) que dans le conteneur lecteur.
   - Ne pas modifier la structure globale du hub; toute surcouche (gate, overlay, tutoriel) propre au lecteur doit être montée/démontée dans son conteneur.
+
+## Chat Handoff (Synthèse concise)
+- Splash lecteur: s’affiche une fois par session ET par chapitre.
+  - Clé session: eader:splashSeen:<chapterId>; montré si absent, marqué à la fin du splash.
+  - Contenu: fond #FEFFF4, image chap., badge numéro + titre en fade; pas de son; min hold ~2.2s.
+- Bannière in‑app: full avant première action → compact (un bouton) sur le hub → jamais en liseuse.
+- Navigation liseuse: sans scroll; swipe → page ±1; double‑tap → overlay; tap dialogue → voix; long‑press → partage TikTok (plus tard).
+- Audio: contexte Web Audio initialisé uniquement sur geste; rail 🎵 pilote musicGain uniquement (pas SFX/voix).
+- FAB (hub): visible seulement quand les actions hero sont hors‑écran; réinitialisé au retour du lecteur.
+- Plein écran mobile: pseudo‑fullscreen si in‑app; à la sortie, appliquer un court override “force‑mobile” pour éviter le layout tablette.
+- Reprise: CTA “Reprendre le tale” si progression; recommencer via “carte 1”.
+- Paiement: Stripe Checkout + webhook; jamais débloquer côté client sans entitlement.
+- Routes: hub par défaut, lecteur /#/reader/:chapterId; scoper comportements via ody[data-mode].
+- Transitions: entrée lecteur en fade; pages en slide/fade léger selon direction.

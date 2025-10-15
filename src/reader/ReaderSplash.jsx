@@ -40,3 +40,4 @@ export default function ReaderSplash({ id, title, img, ready, onFinished }) {
   )
 }
 
+

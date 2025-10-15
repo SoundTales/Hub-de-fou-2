@@ -1,7 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 
 function Dialogue({ block, read, onTap }) {
   const tRef = useRef(null)
+  
+  // Gestionnaire de clic principal pour les dialogues
+  const handleClick = (e) => {
+    e.stopPropagation() // Empêcher la propagation vers le conteneur parent
+    console.log('Dialogue cliqué dans PageViewport:', block.id, block.speaker)
+    onTap?.(block.id)
+  }
+  
   // long-press placeholder
   useEffect(() => {
     const el = tRef.current
@@ -15,37 +23,77 @@ function Dialogue({ block, read, onTap }) {
     el.addEventListener('pointerleave', up)
     return () => { clearTimeout(timer); el.removeEventListener('pointerdown', down); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); el.removeEventListener('pointerleave', up) }
   }, [])
+  
   return (
-    <div ref={tRef} className={`dlg ${read ? 'dlg--read' : ''}`} onClick={() => onTap(block.id)}>
-      <span className="dlg__icon" aria-hidden>💬</span>
-      <span className="dlg__bar" aria-hidden />
+    <div 
+      ref={tRef} 
+      className={`dlg ${read ? 'dlg--read' : ''}`} 
+      onClick={handleClick}
+      style={{ cursor: 'pointer' }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Dialogue de ${block.speaker}: ${block.text}`}
+    >
+      <span className="dlg__icon" aria-hidden="true">💬</span>
+      <span className="dlg__bar" aria-hidden="true" />
       <strong className="dlg__speaker">{block.speaker} :</strong>
       <span className="dlg__text"> {block.text}</span>
     </div>
   )
 }
 
-export default function PageViewport({ page, dir = 'next', readDialogIds, onDialogueTap, onSwipeNext, onSwipePrev, onDoubleTap }) {
+export default function PageViewport({ page, dir = 'next', readDialogIds, onDialogueTap, onSwipeNext, onSwipePrev, onDoubleTap, overlayOpen }) {
   const ref = useRef(null)
   const [entering, setEntering] = useState(true)
+  
+  // Gestionnaire de clic pour double-tap (uniquement pour les zones non-dialogue)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    
+    let lastTapTime = 0
+    let lastTapX = 0
+    let lastTapY = 0
+    
+    const handleClick = (e) => {
+      // Si l'overlay est déjà ouvert: double‑tap ferme même sur un dialogue
+      if (!overlayOpen && e.target.closest('.dlg')) {
+        return
+      }
+      
+      const now = Date.now()
+      const x = e.clientX
+      const y = e.clientY
+      
+      // Vérifier si c'est un double-tap
+      if (now - lastTapTime < 300 && 
+          Math.abs(x - lastTapX) < 16 && 
+          Math.abs(y - lastTapY) < 16) {
+        console.log('Double-tap détecté pour overlay')
+        onDoubleTap?.()
+      }
+      
+      lastTapTime = now
+      lastTapX = x
+      lastTapY = y
+    }
+    
+    el.addEventListener('click', handleClick)
+    return () => el.removeEventListener('click', handleClick)
+  }, [onDoubleTap, overlayOpen])
+  
   useEffect(() => {
     const el = ref.current
     if (!el) return
     el.style.touchAction = 'none'
     let x0 = 0, y0 = 0, t0 = 0, moved = false
-    const onDown = (e) => { x0 = e.clientX; y0 = e.clientY; t0 = Date.now(); moved = false; el.setPointerCapture(e.pointerId) }
+    const onDown = (e) => { x0 = e.clientX; y0 = e.clientY; t0 = Date.now(); moved = false; el.setPointerCapture?.(e.pointerId) }
     const onMove = (e) => { if (Math.abs(e.clientX - x0) > 6 || Math.abs(e.clientY - y0) > 6) moved = true }
     const onUp = (e) => {
       const dx = e.clientX - x0; const dy = e.clientY - y0
-      const dt = Date.now() - t0
-      if (!moved && dt < 280) {
-        // potential double tap
-        const last = el._lastTap || 0
-        el._lastTap = Date.now()
-        if (Date.now() - last < 280) onDoubleTap?.()
-        return
-      }
-      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      
+      // Si c'est un swipe horizontal (et pas un clic sur dialogue)
+      if (moved && Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
         if (dx < 0) onSwipeNext?.(); else onSwipePrev?.()
       }
     }
@@ -54,7 +102,7 @@ export default function PageViewport({ page, dir = 'next', readDialogIds, onDial
     el.addEventListener('pointerup', onUp)
     el.addEventListener('pointercancel', onUp)
     return () => { el.removeEventListener('pointerdown', onDown); el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointercancel', onUp) }
-  }, [onSwipeNext, onSwipePrev, onDoubleTap, page?.index])
+  }, [onSwipeNext, onSwipePrev, page?.index])
 
   useEffect(() => {
     const t = setTimeout(() => setEntering(false), 500)
@@ -71,3 +119,4 @@ export default function PageViewport({ page, dir = 'next', readDialogIds, onDial
     </section>
   )
 }
+

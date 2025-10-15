@@ -1,0 +1,16 @@
+{
+  "id": "1",
+  "taleId": "tale1",
+  "title": "Chapitre 1",
+  "blocks": [
+    { "type": "para", "id": "p1", "text": "C'était toujours pareil..." },
+    { "type": "dialogue", "id": "d1", "speaker": "Malone", "text": "On s'occupe de tout. On va faire le reste." },
+    { "type": "para", "id": "p2", "text": "Elle secoua sa tête de haut en bas..." },
+    { "type": "para", "id": "p3", "text": "Le monde autour resta là jusqu'à l'aube..." }
+  ],
+  "triggers": [
+    { "kind": "cue", "id": "intro", "at": "progress:0.0", "src": "/signature.mp3", "loop": true },
+    { "kind": "sfx", "id": "door", "at": "para:p2", "src": "/signature.mp3" },
+    { "kind": "voice", "id": "d1", "at": "dialogue:d1", "src": "/signature.mp3" }
+  ]
+}

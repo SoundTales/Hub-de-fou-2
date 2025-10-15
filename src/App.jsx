@@ -12,6 +12,8 @@ export default function App() {
   const baseUrl = import.meta.env.BASE_URL || './'
   // Mark current mode for style/behavior scoping (hub vs reader)
   const [isInApp, setIsInApp] = useState(false)
+  const [bannerMode, setBannerMode] = useState('hidden')
+  const [isFullscreen, setIsFullscreen] = useState(() => !!(document.fullscreenElement || document.webkitFullscreenElement))
 
   // Simple hash-based routing to isolate the reader from the hub
   const [route, setRoute] = useState(() => window.location.hash || '#/')
@@ -88,9 +90,64 @@ export default function App() {
     const ua = navigator.userAgent || navigator.vendor || window.opera
     const inApp = /FBAN|FBAV|Instagram|Messenger|Line\//i.test(ua) || /; wv\)/i.test(ua) || /FB_IAB/i.test(ua)
     setIsInApp(inApp)
+    if (inApp) {
+      const firstDone = localStorage.getItem('iab:firstActionDone') === '1'
+      setBannerMode(firstDone ? 'compact' : 'full')
+    }
   }, [])
 
-  // Gate helpers: fullscreen + one-shot audio signature
+    // Banner route switch + first action compression
+  useEffect(() => {
+    if (isReaderRoute) {
+      setBannerMode('hidden')
+      return
+    }
+    if (isInApp) {
+      const firstDone = localStorage.getItem('iab:firstActionDone') === '1'
+      setBannerMode(firstDone ? 'compact' : 'full')
+    }
+  }, [isReaderRoute, isInApp])
+
+  useEffect(() => {
+    if (!isInApp || isReaderRoute) return
+    const onFirst = () => {
+      if (localStorage.getItem('iab:firstActionDone') !== '1') {
+        try { localStorage.setItem('iab:firstActionDone','1') } catch {}
+        setBannerMode('compact')
+      }
+      window.removeEventListener('pointerdown', onFirst, true)
+      window.removeEventListener('keydown', onFirst, true)
+      window.removeEventListener('touchstart', onFirst, true)
+    }
+    window.addEventListener('pointerdown', onFirst, true)
+    window.addEventListener('keydown', onFirst, true)
+    window.addEventListener('touchstart', onFirst, true)
+    return () => {
+      window.removeEventListener('pointerdown', onFirst, true)
+      window.removeEventListener('keydown', onFirst, true)
+      window.removeEventListener('touchstart', onFirst, true)
+    }
+  }, [isInApp, isReaderRoute])
+
+  // Track fullscreen and keep mobile layout briefly after exiting on mobile
+  useEffect(() => {
+    const onFs = () => {
+      const fsEl = document.fullscreenElement || document.webkitFullscreenElement
+      setIsFullscreen(!!fsEl)
+      if (!fsEl && window.innerWidth < 769) {
+        document.body.classList.add('force-mobile')
+        setTimeout(() => document.body.classList.remove('force-mobile'), 1500)
+      }
+    }
+    document.addEventListener('fullscreenchange', onFs)
+    document.addEventListener('webkitfullscreenchange', onFs)
+    // initialize state
+    onFs()
+    return () => {
+      document.removeEventListener('fullscreenchange', onFs)
+      document.removeEventListener('webkitfullscreenchange', onFs)
+    }
+  }, [])// Gate helpers: fullscreen + one-shot audio signature
   // Fallback pseudo-fullscreen for in-app browsers that don't support Fullscreen API
   const enablePseudoFullscreen = () => {
     try {
@@ -127,6 +184,17 @@ export default function App() {
     if (isInAppBrowser) {
       enablePseudoFullscreen()
     }
+  }
+
+  const exitFullscreen = async () => {
+    try {
+      if (document.exitFullscreen) await document.exitFullscreen()
+      else if (document.webkitExitFullscreen) await document.webkitExitFullscreen()
+    } catch {}
+    try {
+      document.documentElement.classList.remove('pseudo-fullscreen')
+      document.body.classList.remove('pseudo-fullscreen')
+    } catch {}
   }
 
   const openInBrowser = () => {
@@ -260,14 +328,14 @@ export default function App() {
   // Floating actions bar visibility when hero actions are off-screen
   useEffect(() => {
     const target = actionsRef.current
-    if (!target || !('IntersectionObserver' in window)) return
+    if (isReaderRoute || !target || !('IntersectionObserver' in window)) return
     const io = new IntersectionObserver((entries) => {
       const e = entries[0]
       setShowFab(!e.isIntersecting)
     }, { threshold: 0.01 })
     io.observe(target)
     return () => io.disconnect()
-  }, [])
+  }, [isReaderRoute])
 
   // Render reader shell when on reader route
   if (isReaderRoute) {
@@ -277,7 +345,32 @@ export default function App() {
 
   return (
     <div className="page" data-role="hub">
-      {isInApp && (
+      {!isReaderRoute && (
+        <button
+          className="fs-btn"
+          type="button"
+          aria-label={isFullscreen ? 'Quitter le plein écran' : 'Activer le plein écran'}
+          onClick={isFullscreen ? exitFullscreen : enterFullscreen}
+          title={isFullscreen ? 'Quitter le plein écran' : 'Activer le plein écran'}
+        >
+          {isFullscreen ? (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 4H4v5" />
+              <path d="M15 4h5v5" />
+              <path d="M4 15v5h5" />
+              <path d="M20 15v5h-5" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 9V4h5" />
+              <path d="M20 9V4h-5" />
+              <path d="M4 15v5h5" />
+              <path d="M20 15v5h-5" />
+            </svg>
+          )}
+        </button>
+      )}
+      {isInApp && bannerMode === 'full' && (
         <div className="iab-banner" role="region" aria-label="Ouvrir dans le navigateur">
           <p className="iab-text">Pour profiter du plein écran, lancez la liseuse dans votre navigateur préféré.</p>
           <div className="iab-actions">
@@ -286,7 +379,11 @@ export default function App() {
           </div>
         </div>
       )}
-      <header className="hero">
+      {isInApp && bannerMode === 'compact' && (
+        <div className="iab-banner iab-banner--compact" role="region" aria-label="Ouvrir dans le navigateur">
+          <button className="iab-btn" type="button" onClick={openInBrowser}>Ouvrir dans le navigateur</button>
+        </div>
+      )}<header className="hero">
         <div className="hero__fade" aria-hidden="true"></div>
 
         <div className="hero__content">
@@ -326,7 +423,7 @@ export default function App() {
             tabIndex={0}
             onClick={() => {
               const img = `https://picsum.photos/800/450?random=${i + 1}`
-              const payload = { id: String(i + 1), img, title: 'À JAMAIS, POUR TOUJOURS' }
+              const payload = { id: String(i + 1), img, title: 'Ã€ JAMAIS, POUR TOUJOURS' }
               try { sessionStorage.setItem('reader:splash', JSON.stringify(payload)) } catch {}
               window.location.hash = `#/reader/${i + 1}`
             }}
@@ -334,7 +431,7 @@ export default function App() {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
                 const img = `https://picsum.photos/800/450?random=${i + 1}`
-                const payload = { id: String(i + 1), img, title: 'À JAMAIS, POUR TOUJOURS' }
+                const payload = { id: String(i + 1), img, title: 'Ã€ JAMAIS, POUR TOUJOURS' }
                 try { sessionStorage.setItem('reader:splash', JSON.stringify(payload)) } catch {}
                 window.location.hash = `#/reader/${i + 1}`
               }
@@ -357,7 +454,7 @@ export default function App() {
       {showGate && (
         <div className={`gate ${gateState === 'starting' ? 'is-starting' : ''} ${gateState === 'finishing' ? 'is-finishing' : ''}`}>
           <button className="gate__hit" aria-label="Lancer la liseuse" onClick={startGate}>
-            <span className="gate__msg">Touchez l'écran pour lancer la liseuse</span>
+            <span className="gate__msg">Touchez l’écran pour lancer la liseuse</span>
             {/* Try multiple paths for the logo */}
             <img 
               className="gate__logo" 
@@ -390,3 +487,8 @@ export default function App() {
     </div>
   )
 }
+
+
+
+
+
