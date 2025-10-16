@@ -403,6 +403,7 @@ html, body { -ms-overflow-style: none; scrollbar-width: none; }
     margin-left: clamp(48px, 8vw, 120px) !important;
     margin-right: auto !important;
     width: min(560px, 46vw) !important;
+    margin-top: clamp(20px, 6vh, 72px) !important;
   }
   .hero__title { font-size: clamp(64px, 8.5vw, 110px) !important; }
   .hero__actions { justify-content: flex-start; gap: 8px; margin-top: 18px; }
@@ -474,7 +475,7 @@ html, body { -ms-overflow-style: none; scrollbar-width: none; }
 @media (max-width: 896px) and (orientation: landscape) {
   :root { --hero-bleed: 120px; }
   .hero { height: 42vh !important; }
-  .hero__content { width: min(92vw, 640px) !important; gap: 12px; }
+  .hero__content { width: min(92vw, 640px) !important; gap: 12px; margin-top: clamp(16px, 6vh, 56px) !important; }
   .hero__title { font-size: clamp(40px, 9vw, 72px) !important; }
   .hero__actions { gap: 8px; margin-top: 12px; }
   .hero__cta { height: 48px !important; padding: 0 48px !important; }
@@ -518,17 +519,27 @@ html, body { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* Launch gate (fullscreen intro) */
 .gate {
-  position: fixed; inset: 0; z-index: 1000;
-  background: #424242; display: flex; align-items: center; justify-content: center;
+  position: fixed; inset: 0; z-index: 100000;
+  background: #424242;
+  display: grid; place-items: center;
   transition: opacity .9s ease;
-  /* Ensure gate doesn't interfere with mobile scrolling when not active */
-  touch-action: manipulation;
+  /* Block any scroll/overscroll while gate is shown */
+  overflow: hidden; overscroll-behavior: none; touch-action: none;
   /* Force hardware acceleration for better performance in in-app browsers */
-  transform: translateZ(0);
-  will-change: opacity;
-  /* Respect safe areas so centering stays visually centered in full screen */
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  transform: translateZ(0); will-change: opacity;
+  contain: layout paint;
+  padding: 0;
 }
+
+/* Vignette respirante (halo radial très léger) */
+.gate::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(100% 120% at 50% 50%, transparent 60%, rgba(0,0,0,0.10) 100%);
+  opacity: 0; transition: opacity 600ms ease;
+}
+.gate.is-logo::before { opacity: 1; }
+.gate.is-finishing::before { opacity: 0; }
 
 /* In-app browser banner: suggest opening in system browser */
 .iab-banner {
@@ -599,68 +610,51 @@ html, body { -ms-overflow-style: none; scrollbar-width: none; }
 .gate__hit {
   all: unset;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+  position: relative;
   width: 100%;
   height: 100%;
-  gap: clamp(40px, 8vh, 80px);
   /* Enhanced touch handling for in-app browsers */
   -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
 }
 .gate__msg {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(18px, 4vw, 32px);
-  color: #fefff4;
-  letter-spacing: 0.06em;
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity .6s ease, transform .6s ease;
-  text-align: center;
-  max-width: 90%;
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  font-family: 'Playfair Display', serif; text-align: center; max-width: min(92vw, 720px);
+  font-size: clamp(18px, 5vw, 32px); line-height: 1.25; letter-spacing: 0.04em;
+  color: #fefff4; opacity: 1; transition: opacity .6s ease, transform .6s ease;
+  padding: 0 12px;
 }
 .gate__logo {
-  width: clamp(25vw, 35vw, 40vw);
-  max-width: clamp(200px, 350px, 400px);
-  min-width: clamp(120px, 180px, 220px);
-  /* Ensure logo never exceeds screen width with margin */
-  max-width: min(clamp(200px, 350px, 400px), calc(100vw - 32px));
-  height: auto;
-  opacity: 0;
-  transform: scale(0.8);
-  transition: opacity 1.5s ease, transform 1.5s ease;
-  filter: drop-shadow(0 10px 30px rgba(0,0,0,0.6));
-  /* Center the logo and add margin */
-  margin: 0 auto;
-  display: block;
-  /* Prevent logo dragging and selection */
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  pointer-events: none;
-  -webkit-user-drag: none;
-  -khtml-user-drag: none;
-  -moz-user-drag: none;
-  -o-user-drag: none;
-  /* Keep the logo within vertical bounds on mobile full screen */
-  max-height: min(50vh, 50dvh);
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.975);
+  display: block; margin: 0; height: auto; opacity: 0; /* start hidden for fade-in */
+  width: min(52vw, 36vh); /* proportionnel à l'écran */
+  max-width: min(380px, calc(100vw - 48px));
+  max-height: min(44vh, 44dvh);
+  transition: opacity 2000ms cubic-bezier(0.16,1,0.3,1), filter 2000ms cubic-bezier(0.16,1,0.3,1);
+  will-change: opacity, transform, filter;
+  filter: drop-shadow(0 10px 30px rgba(0,0,0,0.6)) blur(0.6px);
+
+  user-select: none; -webkit-user-select: none; pointer-events: none; -webkit-user-drag: none;
 }
-.gate.is-starting .gate__msg {
-  opacity: 0;
-  transform: translateY(-12px);
+/* When inline SVG is used */
+.gate__logo svg { display:block; width:100%; height:auto; color: inherit; }
+.gate__logo [fill]:not([fill="none"]) { fill: currentColor; }
+.gate__logo [stroke]:not([stroke="none"]) { stroke: currentColor; }
+.gate.is-starting .gate__msg { opacity: 0; transform: translateY(-12px); }
+.gate.is-starting .gate__logo { opacity: 1; }
+.gate.is-finishing .gate__msg, .gate.is-finishing .gate__logo { opacity: 0; }
+/* lock final zoom at fade-out to avoid snap back */
+.gate.is-finishing .gate__logo { transform: translate(-50%, -50%) scale(1.03); transition: opacity 500ms ease; }
+.gate.is-finishing { opacity: 0; transition: opacity 500ms ease; }
+
+/* Instant logo state: no fade/crossfade, message hidden */
+.gate.is-logo .gate__msg { display: none !important; }
+.gate.is-logo .gate__logo { opacity: 1 !important; filter: drop-shadow(0 10px 30px rgba(0,0,0,0.6)) blur(0); animation: gate-zoom 7000ms cubic-bezier(0.16,1,0.3,1) forwards; transform-origin: 50% 50%; }
+
+@keyframes gate-zoom {
+  0% { transform: translate(-50%, -50%) scale(0.98); }
+  100% { transform: translate(-50%, -50%) scale(1.02); }
 }
-.gate.is-starting .gate__logo {
-  opacity: 1;
-  transform: scale(1);
-}
-.gate.is-finishing .gate__msg,
-.gate.is-finishing .gate__logo {
-  opacity: 0;
-  transform: scale(0.9);
-}
+
 
 /* When fading out, let scroll/pan pass through immediately */
 .gate.is-finishing {
@@ -668,29 +662,7 @@ html, body { -ms-overflow-style: none; scrollbar-width: none; }
 }
 
 /* Media queries adjustments for gate logo */
-@media (max-width: 768px) {
-  .gate__logo {
-    width: clamp(40vw, 50vw, 60vw);
-    max-width: min(280px, calc(100vw - 24px));
-    min-width: 160px;
-  }
-}
-
-@media (max-width: 480px) {
-  .gate__logo {
-    width: clamp(50vw, 60vw, 70vw);
-    max-width: min(250px, calc(100vw - 20px));
-    min-width: 140px;
-  }
-}
-
-@media (min-width: 1025px) {
-  .gate__logo {
-    width: clamp(20vw, 30vw, 35vw);
-    max-width: min(400px, calc(100vw - 48px));
-    min-width: 200px;
-  }
-}
+/* logo sizing already proportional; media blocks no longer required */
 
 /* Better mobile scroll prevention with special in-app browser handling */
 .no-scroll { 
@@ -904,7 +876,8 @@ body.force-mobile .hero { padding: 24px 16px !important; height: 62vh !important
 /* Fullscreen button (robust reset to avoid oversized rendering) */
 .fs-btn { all: unset; position: fixed; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); z-index: 10060; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: rgba(30,30,30,0.75); border: 1px solid rgba(255,255,255,0.16); color: #fefff4; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.25); font-size: 0; }
 .fs-btn svg { width: 20px; height: 20px; display: block; fill: currentColor; }
-@media (max-width: 768px) { .fs-btn { display: none; } }
+/* Always show the fullscreen toggle on the hub (positioned top-right) */
+/* No hide on mobile to keep an accessible exit */
 
 /* Theme floating toggle */
 .reader__theme { width: 40px; height: 40px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.2); background: rgba(0,0,0,0.08); cursor: pointer; }
@@ -963,4 +936,7 @@ body.force-mobile .hero { padding: 24px 16px !important; height: 62vh !important
 @media (min-width: 1536px) {
   .gallery { grid-template-columns: repeat(4, minmax(0, 1fr)); width: min(1480px, 90vw); }
 }
+
+
+
 

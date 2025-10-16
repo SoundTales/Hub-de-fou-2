@@ -2,6 +2,7 @@
 import ReaderShell from './reader/ReaderShell.jsx'
 import { getAudioEngine } from './reader/audioSingleton.js'
 import { getTales, getEntitlements } from './api/client.js'
+import HubSplashLogo from './HubSplashLogo.jsx'
 
 export default function App() {
   const eyebrowRef = useRef(null)
@@ -28,6 +29,15 @@ export default function App() {
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
+
+  // Lock body scroll while gate is visible (all devices/in-app too)
+  useEffect(() => {
+    try {
+      if (showGate) document.body.classList.add('no-scroll')
+      else document.body.classList.remove('no-scroll')
+    } catch {}
+    return () => { try { document.body.classList.remove('no-scroll') } catch {} }
+  }, [showGate])
 
   // Load tales + entitlements (mock)
   useEffect(() => {
@@ -270,7 +280,8 @@ export default function App() {
 
   const startGate = async () => {
     if (gateState !== 'idle') return
-    setGateState('starting')
+    // Instantly switch to logo state (no crossfade with the message)
+    setGateState('logo')
     // Detect in-app browsers
     const userAgent = navigator.userAgent || navigator.vendor || window.opera
     const isInAppBrowser = /FBAN|FBAV|Instagram|Messenger|Line\//i.test(userAgent) || /; wv\)/i.test(userAgent)
@@ -289,8 +300,8 @@ export default function App() {
       setGateState('finishing')
       // Remove no-scroll class when gate is finishing
       document.body.classList.remove('no-scroll')
-      // keep DOM long enough for CSS fade (900ms) to complete comfortably
-      setTimeout(() => setShowGate(false), 1100)
+      // keep DOM long enough for CSS fade (500ms) to complete comfortably
+      setTimeout(() => setShowGate(false), 650)
     }
 
     try {
@@ -371,13 +382,13 @@ export default function App() {
 
   return (
     <div className="page" data-role="hub">
-      {!isReaderRoute && (
+      {!isReaderRoute && !showGate && (
         <button
           className="fs-btn"
           type="button"
-          aria-label={isFullscreen ? 'Quitter le plein Ã©cran' : 'Activer le plein Ã©cran'}
+          aria-label={isFullscreen ? 'Quitter le plein \u00E9cran' : 'Activer le plein \u00E9cran'}
           onClick={isFullscreen ? exitFullscreen : enterFullscreen}
-          title={isFullscreen ? 'Quitter le plein Ã©cran' : 'Activer le plein Ã©cran'}
+          title={isFullscreen ? 'Quitter le plein \u00E9cran' : 'Activer le plein \u00E9cran'}
         >
           {isFullscreen ? (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -398,7 +409,7 @@ export default function App() {
       )}
       {isInApp && bannerMode === 'full' && (
         <div className="iab-banner" role="region" aria-label="Ouvrir dans le navigateur">
-          <p className="iab-text">Pour profiter du plein Ã©cran, lancez la liseuse dans votre navigateur prÃ©fÃ©rÃ©.</p>
+          <p className="iab-text">Pour profiter du plein \u00E9cran, lancez la liseuse dans votre navigateur pr\u00E9f\u00E9r\u00E9.</p>
           <div className="iab-actions">
             <button className="iab-btn" type="button" onClick={openInBrowser}>Ouvrir dans le navigateur</button>
             <button className="iab-btn iab-btn--ghost" type="button" onClick={copyLink}>Copier le lien</button>
@@ -416,7 +427,7 @@ export default function App() {
           {/* Eyebrow (top line) */}
           <span className="hero__eyebrow" ref={eyebrowRef}>
             <span className="hero__eyebrow-primary">SOUND TALES</span>
-            <span className="hero__eyebrow-secondary"> PRODUCTION</span>
+            <span className="hero__eyebrow-secondary"> PRÉSENTE</span>
           </span>
 
           {/* Main title */}
@@ -494,24 +505,10 @@ export default function App() {
         })}
       </main>
       {showGate && (
-        <div className={`gate ${gateState === 'starting' ? 'is-starting' : ''} ${gateState === 'finishing' ? 'is-finishing' : ''}`}>
+        <div className={`gate ${gateState === 'starting' ? 'is-starting' : ''} ${(gateState === 'logo' || gateState === 'finishing') ? 'is-logo' : ''} ${gateState === 'finishing' ? 'is-finishing' : ''}`}>
           <button className="gate__hit" aria-label="Lancer la liseuse" onClick={startGate}>
-            <span className="gate__msg">Touchez lâ€™Ã©cran pour lancer la liseuse</span>
-            {/* Try multiple paths for the logo */}
-            <img 
-              className="gate__logo" 
-              src={`${baseUrl}logo.svg`} 
-              alt="Logo"
-              onError={(e) => {
-                // Fallback paths if main path fails
-                const fallbacks = [`./logo.svg`, `/Hub-de-fou-2/logo.svg`, `logo.svg`]
-                const currentSrc = e.target.src
-                const nextFallback = fallbacks.find(path => !currentSrc.includes(path))
-                if (nextFallback) {
-                  e.target.src = nextFallback
-                }
-              }}
-            />
+            <span className="gate__msg">Touchez l'écran pour lancer la liseuse</span>
+            <HubSplashLogo baseUrl={baseUrl} />
           </button>
         </div>
       )}
@@ -529,6 +526,14 @@ export default function App() {
     </div>
   )
 }
+
+
+
+
+
+
+
+
 
 
 
