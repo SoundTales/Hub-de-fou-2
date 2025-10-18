@@ -1,7 +1,11 @@
 // Mock API client pour développement
 
+// Petit délai simulé pour homogénéiser les temps de chargement
+const delay = (base = 220, jitter = 160) => new Promise(r => setTimeout(r, base + Math.floor(Math.random() * jitter)))
+
 export async function getChapterAst(taleId, chapterId, options = {}) {
   // Simuler une erreur pour forcer le fallback vers le contenu mock
+  await delay()
   throw new Error('Mock API - utilisera le contenu de test')
 }
 
@@ -9,6 +13,7 @@ export async function getEntitlements() {
   // Mock entitlements – partiel pour démonstration des chapitres verrouillés
   // - tale1: seuls les chapitres 1 et 2 sont déverrouillés
   // - tale2: seul le chapitre 1 est déverrouillé
+  await delay()
   return {
     chapters: {
       'tale1:1': true,
@@ -23,12 +28,14 @@ export async function getEntitlements() {
 
 export async function createCheckoutSession({ chapterId, taleId }) {
   // Mock checkout - redirect vers une page de test
+  await delay(180, 120)
   console.warn('Mock checkout session pour', { chapterId, taleId })
   return 'https://example.com/mock-checkout'
 }
 
 export async function getTales(options = {}) {
   // Essaie une API, puis JSON mock, puis inline
+  await delay()
   const withBase = (p) => {
     try {
       const b = options?.baseUrl || (import.meta?.env?.BASE_URL || '/')
@@ -75,4 +82,3 @@ export async function getTales(options = {}) {
     ]
   }
 }
-

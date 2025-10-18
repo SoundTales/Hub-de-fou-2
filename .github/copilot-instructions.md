@@ -234,3 +234,39 @@ Ce bloc résume les décisions prises et le système audio/overlay en place pour
 
 - À continuer côté client
   - Persistance marque‑pages; hub dynamique via `getTales()`; réglages prompt audio/typo/volumes persistés; peaufinage prefetch/LRU et logs p95 fetch/decode.
+
+
+## Chat Handoff – Récap Session Courante (résumé)
+
+- Gate/Splash hub (mobile-first)
+  - Un seul gate couvrant, z-index élevé, scroll bloqué. Texte UTF‑8: « Touchez l’écran pour lancer la liseuse ».
+  - Splash logo: fade‑in 2000 ms + zoom lent (0.98 → 1.02 sur 7000 ms, cubic‑bezier 0.16,1,0.3,1), fade‑out global fond+logo. Glint retiré; pas de filtres SVG lourds.
+  - Audio: whoosh « signature.mp3 » déclenché dans la chaîne du geste; pas de son sur la liseuse splash.
+
+- Hub UI/Accessibilité
+  - Bouton « Remonter » (portrait mobile/tablette): apparaît quand l’utilisateur remonte (profondeur > 150–300 px), reste visible jusqu’à voir le bas du hero ou si l’utilisateur redescend. Style discret (verre/blur), transitions douces, focus-visible.
+  - Paysage (mobile/tablette): plus d’espace haut (margin-top sur .hero__content). Libellé hero: « SOUND TALES PRÉSENTE ».
+
+- Liseuse/Audio
+  - AudioEngine unique (Web Audio + fallback). Aucun autoplay voix; cues seulement en avant; SFX préchargés; crossfade 200–300 ms.
+  - Overlay: B/A+/Aa, Nuit/Jour; rails musique/voix; dock MARQUE‑PAGE/CHAPITRAGE (exclusifs).
+
+- Données/Commerce
+  - Hub dynamique via `getTales()` + entitlements mock; paywall client minimal (vrai contrôle côté serveur). Stripe client mock — ne jamais débloquer côté client.
+
+- Techniques/conventions
+  - Routes: hub par défaut; liseuse `/#/reader/:chapterId`. Scopes via `body[data-mode]`.
+  - In‑app: pseudo‑fullscreen si Fullscreen API indisponible; safe‑areas (`env()`), `100dvh`. Respect `prefers-reduced-motion`.
+
+## Nouveau chat – Prompt de démarrage conseillé
+
+Tu es Codex dans un projet React 18 + Vite (react-swc). Respecte strictement ces règles:
+
+- Gate/Splash hub: plein écran couvrant, scroll bloqué; texte « Touchez l’écran pour lancer la liseuse »; logo fade‑in 2s + zoom lent 7s (0.98→1.02, cubic‑bezier 0.16,1,0.3,1); fade‑out global. Pas de glint/filtres SVG lourds.
+- Audio: AudioEngine singleton (Web Audio + fallback). Prime via pointerdown; pas d’autoplay voix; cues/SFX selon AST; whoosh « signature.mp3 » sur le tap.
+- Liseuse: pas de scroll vert.; swipe; double‑tap overlay; tap voix avec ducking; overlay (B/A+/Aa, Nuit/Jour, rails musique/voix), dock MARQUE‑PAGE/CHAPITRAGE.
+- Hub: bouton « Remonter » sticky en remontée et jusqu’à voir le bas du hero; discret, accessible; fab/bannières in‑app inchangés.
+- Données: hub dynamique via `getTales()` + entitlements mock; Stripe mock; jamais débloquer côté client.
+- Routes: hub par défaut; liseuse `/#/reader/:chapterId`; scoper via `body[data-mode]`. In‑app: pseudo‑fullscreen, safe‑areas.
+
+Quand tu prends une nouvelle tâche, propose un plan court et applique ces règles (audio dans la chaîne du geste, transitions GPU‑friendly, pas d’autoplay voix, séparation hub/liseuse).

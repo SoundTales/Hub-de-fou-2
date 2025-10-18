@@ -4,6 +4,17 @@ import App from './App.jsx';
 import './styles.css';
 import './gesturePrime.js';
 
+// Input-modality: pointer vs keyboard (Tab) to control focus rings on mobile
+(() => {
+  if (typeof document === 'undefined') return;
+  const setPointer = () => { try { document.body.dataset.input = 'pointer'; } catch {} };
+  const setKeyboard = (e) => { if (e?.key === 'Tab') { try { document.body.dataset.input = 'keyboard'; } catch {} } };
+  window.addEventListener('pointerdown', setPointer, true);
+  window.addEventListener('touchstart', setPointer, true);
+  window.addEventListener('mousedown', setPointer, true);
+  window.addEventListener('keydown', setKeyboard, true);
+})();
+
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);

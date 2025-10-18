@@ -10,6 +10,31 @@ import { getEntitlements, createCheckoutSession } from '../api/client.js'
 // Guard to avoid double splash in React StrictMode
 let lastSplashGuard = { id: null, ts: 0 }
 
+function ChapterFavButton({ chapterId, taleId = 'tale1' }) {
+  const getKey = () => `hub:fav:${taleId}:${chapterId}`
+  const [on, setOn] = useState(() => {
+    try { return localStorage.getItem(getKey()) === '1' } catch { return false }
+  })
+  useEffect(() => {
+    try { setOn(localStorage.getItem(getKey()) === '1') } catch {}
+  }, [chapterId, taleId])
+  return (
+    <button
+      className={`reader__fav ${on ? 'is-on' : ''}`}
+      aria-label={on ? 'Retirer des signets' : 'Ajouter aux signets'}
+      aria-pressed={on}
+      onClick={() => {
+        try {
+          const key = getKey()
+          if (localStorage.getItem(key) === '1') { localStorage.removeItem(key); setOn(false) }
+          else { localStorage.setItem(key, '1'); setOn(true) }
+        } catch {}
+      }}
+      title={on ? 'Retirer des signets' : 'Ajouter aux signets'}
+      style={{ marginRight: 8 }}
+    ><svg className="hero__bookmark-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1z" /></svg></button>
+  )
+}
 export default function ReaderShell({ chapterId, baseUrl }) {
   const [overlayOpen, setOverlayOpen] = useState(false)
   const [splashData, setSplashData] = useState(null)
@@ -36,6 +61,7 @@ export default function ReaderShell({ chapterId, baseUrl }) {
   const [overlayTab, setOverlayTab] = useState('none') // none | chapters | bookmark
   const [voiceVolume, setVoiceVolume] = useState(1)
   const overlayTapRef = useRef(0)
+  const taleId = 'tale1'
 
   // Load persisted preferences once
   useEffect(() => {
@@ -141,7 +167,6 @@ export default function ReaderShell({ chapterId, baseUrl }) {
   const { loading, error, ast, pages } = useChapter({ taleId: 'tale1', chapterId, baseUrl })
 
   // --- Bookmarks (per chapter) ---
-  const taleId = 'tale1'
   const bmKey = `reader:bookmarks:${taleId}:${chapterId}`
   const loadBookmarks = () => {
     try {
@@ -168,6 +193,28 @@ export default function ReaderShell({ chapterId, baseUrl }) {
   const clearAllBookmarks = () => {
     setBookmarks(() => { persistBookmarks([]); return [] })
   }
+
+  // Resume to requested page if provided by hub
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('reader:resume')
+      if (!raw) return
+      const r = JSON.parse(raw)
+      if (String(r?.chapterId || '') !== String(chapterId)) return
+      const idx = Math.max(0, parseInt(r?.pageIndex || 0, 10) || 0)
+      setPageIndex(idx)
+      // one-shot
+      sessionStorage.removeItem('reader:resume')
+    } catch {}
+  }, [chapterId])
+
+  // Persist precise reading progress (chapter + page)
+  useEffect(() => {
+    try {
+      const payload = { chapterId: String(chapterId), pageIndex: Math.max(0, pageIndex), ts: Date.now() }
+      localStorage.setItem(`reader:progress:${taleId}`, JSON.stringify(payload))
+    } catch {}
+  }, [taleId, chapterId, pageIndex])
 
   // Autoplay best-effort: dès que l'AST est chargé, tenter de lancer la première boucle
   useEffect(() => {
@@ -404,6 +451,7 @@ export default function ReaderShell({ chapterId, baseUrl }) {
               <button className="reader__back" onClick={() => { window.location.hash = '#/' }}>← Retour</button>
             </div>
             <div className="reader__header-center">
+              <ChapterFavButton chapterId={chapterId} />
               <div className="reader__book">{(ast?.title || 'À JAMAIS, POUR TOUJOURS')}</div>
               <div className="reader__page">{Math.max(1, Math.min(pageIndex + 1, pages?.length || 1))}/{pages?.length || 1}</div>
             </div>
@@ -466,7 +514,7 @@ export default function ReaderShell({ chapterId, baseUrl }) {
                     onClick={toggleBookmarkCurrent}
                     title={bookmarked ? "Retirer le marque-page" : "Ajouter un marque-page"}
                     aria-label={bookmarked ? "Retirer le marque-page courant" : "Ajouter un marque-page sur cette page"}
-                  >🔖</button>
+                  ><svg className="hero__bookmark-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1z" /></svg></button>
                   <span className="reader__sep" aria-hidden>|</span>
                   <button
                     className={`reader__pill ${textBtn==='small' ? 'is-active' : ''}`}
@@ -579,6 +627,7 @@ export default function ReaderShell({ chapterId, baseUrl }) {
     </div>
   )
 }
+
 
 
 

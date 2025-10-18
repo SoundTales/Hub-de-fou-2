@@ -8,6 +8,23 @@
   --cta-tip: 22px; /* triangular tip width for CTA */
   /* How far the hero image bleeds under the gallery for a smoother transition */
   --hero-bleed: 220px;
+  /* Shared shadows */
+  --shadow-btn-hover: 0 3px 8px rgba(0,0,0,0.22), 0 14px 28px rgba(0,0,0,0.32), 0 0 0 1px rgba(0,0,0,0.06);
+  --shadow-btn-active: 0 1px 2px rgba(0,0,0,0.18), 0 8px 18px rgba(0,0,0,0.26), 0 0 0 1px rgba(0,0,0,0.05);
+}
+/* Interaction resets (centralized) */
+:where(button,[role="button"],.qbtn,.hero__cta,.hero__bookmark){-webkit-appearance:none;appearance:none}
+:where(.qbtn,.hero__cta,.hero__bookmark),:where(.qbtn,.hero__cta,.hero__bookmark) *{-webkit-tap-highlight-color:transparent}
+button:focus:not(:focus-visible),
+.qbtn:focus:not(:focus-visible),
+.hero__cta:focus:not(:focus-visible),
+.hero__bookmark:focus:not(:focus-visible){outline:none}
+button::-moz-focus-inner,.qbtn::-moz-focus-inner,.hero__cta::-moz-focus-inner,.hero__bookmark::-moz-focus-inner{border:0}
+@media(hover:none) and (pointer:coarse){
+  html,body{-webkit-tap-highlight-color:transparent}
+  .qbtn,.hero__cta,.hero__bookmark,
+  .qbtn *,.hero__cta *,.hero__bookmark *{outline:none!important;-webkit-tap-highlight-color:transparent}
+  .qbtn,.hero__cta,.hero__bookmark{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
 }
 /* Pseudo fullscreen: use computed inner height when Fullscreen API is blocked */
 html.pseudo-fullscreen, body.pseudo-fullscreen { 
@@ -19,6 +36,21 @@ html.pseudo-fullscreen, body.pseudo-fullscreen {
 }
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; background: #424242; color: #f5f5f5; }
+
+/* Interaction resets (centralized) */
+:where(button,[role="button"],.qbtn,.hero__cta,.hero__bookmark){-webkit-appearance:none;appearance:none}
+:where(.qbtn,.hero__cta,.hero__bookmark),:where(.qbtn,.hero__cta,.hero__bookmark) *{-webkit-tap-highlight-color:transparent}
+.qbtn:focus:not(:focus-visible),
+.hero__cta:focus:not(:focus-visible),
+.hero__bookmark:focus:not(:focus-visible),
+button:focus:not(:focus-visible){outline:none}
+button::-moz-focus-inner,.qbtn::-moz-focus-inner,.hero__cta::-moz-focus-inner,.hero__bookmark::-moz-focus-inner{border:0}
+@media(hover:none) and (pointer:coarse){
+  html,body{-webkit-tap-highlight-color:transparent}
+  .qbtn,.hero__cta,.hero__bookmark,
+  .qbtn *,.hero__cta *,.hero__bookmark *{outline:none!important;-webkit-tap-highlight-color:transparent}
+  .qbtn,.hero__cta,.hero__bookmark{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+}
 
 /* Hide scrollbars everywhere while preserving scroll */
 html, body { -ms-overflow-style: none; scrollbar-width: none; }
@@ -198,6 +230,7 @@ html, body { -ms-overflow-style: none; scrollbar-width: none; }
     0 0 0 1px rgba(255,255,128,0.08);
   display: flex; flex-direction: column; gap: 20px; color: #f5f5f5; cursor: pointer;
   transition: transform 220ms ease, box-shadow 220ms ease, filter 220ms ease;
+  position: relative;
 }
 .card:hover { 
   transform: translateY(-4px) scale(1.01);
@@ -253,6 +286,118 @@ html, body { -ms-overflow-style: none; scrollbar-width: none; }
   .gallery .card { padding: 28px 32px 36px; gap: 20px; }
   .gallery .card__media { margin-top: 32px; }
 }
+
+/* Quickbar (floating buttons on hub) */
+.quickbar {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  z-index: 10060;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+.quickbar.is-on { opacity: 1; pointer-events: auto; }
+.quickbar.is-off { opacity: 0; pointer-events: none; }
+body[data-mode='reader'] .quickbar { display: none !important; }
+
+.qbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)) rgba(32,32,32,0.62);
+  color: #fefff4;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.18), 0 8px 18px rgba(0,0,0,0.26);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.28);
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease, opacity 220ms ease;
+}
+.qbtn.is-hidden { opacity: 0; pointer-events: none; }
+.qbtn:focus-visible { outline: 2px solid #ffff80; outline-offset: 2px; }
+.qbtn:hover { transform: translateY(-2px); box-shadow: var(--shadow-btn-hover); }
+.qbtn:active, .qbtn[data-pressed="1"] { transform: translateY(0); box-shadow: var(--shadow-btn-active); }
+.qbtn .qicon { display: inline-block; pointer-events: none; font-size: 22px; line-height: 1; }
+.qicon--svg { width: 24px; height: 24px; display: block; }
+
+@media (max-width: 768px) {
+  .qbtn { width: 52px; height: 52px; }
+}
+
+/* Bookmarks panel (hub) */
+.bm-mask {
+  position: fixed;
+  inset: 0;
+  /* Keep mask under quickbar so it never covers quickbar buttons */
+  z-index: 10050;
+  /* Do NOT dim page when bookmarks open */
+  background: transparent;
+}
+.bm-panel {
+  position: fixed;
+  left: var(--bm-left, auto);
+  top: var(--bm-top, auto);
+  /* default transform and animated origin */
+  --bm-transform: translate(-50%, 0);
+  transform: var(--bm-transform);
+  width: min(92vw, 360px);
+  background: #1f2023;
+  color: #fefff4;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.12);
+  overflow: hidden;
+  z-index: 10055; /* above mask, below quickbar */
+  animation: bm-in-grow 160ms ease-out both;
+}
+/* Side variants */
+.bm-panel.bm--bottom { --bm-transform: translate(-50%, 0); transform-origin: 50% 0%; }
+.bm-panel.bm--left { --bm-transform: translate(calc(-100% - 8px), -50%); right: auto; transform-origin: 100% 50%; }
+.bm-panel.bm--right { --bm-transform: translate(0, -50%); transform-origin: 0% 50%; }
+/* Connector arrow */
+.bm-panel::before {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  background: #1f2023;
+  box-shadow: -1px -1px 0 0 rgba(255,255,255,0.12);
+  transform: rotate(45deg);
+}
+.bm-panel.bm--bottom::before { left: 50%; top: -7px; transform: translateX(-50%) rotate(45deg); }
+.bm-panel.bm--left::before { right: -7px; top: 50%; transform: translateY(-50%) rotate(45deg); }
+.bm-panel.bm--right::before { left: -7px; top: 50%; transform: translateY(-50%) rotate(45deg); }
+.bm-list { max-height: 60vh; overflow: auto; }
+
+/* Mobile phones portrait */
+@media (max-width: 480px) and (orientation: portrait) {
+  .bm-panel { width: min(96vw, 420px); border-radius: 14px; }
+  .bm-panel.bm--left { width: min(86vw, 320px); }
+  .bm-list { max-height: 56vh; }
+}
+
+/* Tablets portrait */
+@media (min-width: 481px) and (max-width: 1024px) and (orientation: portrait) {
+  .bm-panel { width: min(92vw, 420px); }
+  .bm-panel.bm--left { width: min(80vw, 360px); }
+  .bm-list { max-height: 60vh; }
+}
+.bm-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.bm-title { font-weight: 800; letter-spacing: .04em; }
+.bm-close { all: unset; cursor: pointer; font-size: 20px; line-height: 1; padding: 6px 8px; }
+.bm-list { display: flex; flex-direction: column; max-height: 60vh; overflow: auto; }
+.bm-empty { padding: 14px; opacity: .8; }
+.bm-item { all: unset; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; }
+.bm-item:hover { background: rgba(255,255,255,0.06); }
+.bm-label { font-weight: 700; letter-spacing: .02em; }
+.bm-badge { min-width: 28px; height: 28px; border-radius: 999px; background: #FEFFF4; color: #1f2023; font-weight: 800; display: inline-grid; place-items: center; }
+@keyframes bm-in-grow { from { transform: var(--bm-transform) scale(0.96); opacity: 0; } to { transform: var(--bm-transform) scale(1); opacity: 1; } }
 
 @media (max-width: 900px) {
   .hero__content {
@@ -342,12 +487,12 @@ html, body { -ms-overflow-style: none; scrollbar-width: none; }
 .hero__cta:hover,
 .hero__bookmark:hover {
   transform: translateY(-2px);
-  box-shadow: 0 3px 8px rgba(0,0,0,0.22), 0 14px 28px rgba(0,0,0,0.32), 0 0 0 1px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-btn-hover);
 }
 .hero__cta:active,
 .hero__bookmark:active {
   transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.18), 0 8px 18px rgba(0,0,0,0.26), 0 0 0 1px rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-btn-active);
 }
 @media (hover: none) {
   .card:hover .card__media { transform: none; }
@@ -522,7 +667,8 @@ html, body { -ms-overflow-style: none; scrollbar-width: none; }
   position: fixed; inset: 0; z-index: 100000;
   background: #424242;
   display: grid; place-items: center;
-  transition: opacity .9s ease;
+  /* Ensure full dynamic viewport coverage to avoid bottom flash */
+  width: 100vw; height: 100svh; height: 100dvh; height: 100lvh; min-height: 100lvh;
   /* Block any scroll/overscroll while gate is shown */
   overflow: hidden; overscroll-behavior: none; touch-action: none;
   /* Force hardware acceleration for better performance in in-app browsers */
@@ -531,15 +677,16 @@ html, body { -ms-overflow-style: none; scrollbar-width: none; }
   padding: 0;
 }
 
-/* Vignette respirante (halo radial très léger) */
-.gate::before {
-  content: '';
-  position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(100% 120% at 50% 50%, transparent 60%, rgba(0,0,0,0.10) 100%);
-  opacity: 0; transition: opacity 600ms ease;
+/* Lock layout during gate to prevent any underlying shift */
+html.gate-lock, body.gate-lock {
+  position: fixed; inset: 0; overflow: hidden; width: 100%; height: 100dvh;
 }
-.gate.is-logo::before { opacity: 1; }
-.gate.is-finishing::before { opacity: 0; }
+/* While locked, hide hub underlay to avoid any incidental paint */
+body.gate-lock .page { visibility: hidden !important; }
+
+/* Vignette respirante (halo radial très léger) */
+/* Remove decorative vignette during gate to ensure perfectly uniform background */
+.gate::before { content: none !important; }
 
 /* In-app browser banner: suggest opening in system browser */
 .iab-banner {
@@ -607,26 +754,46 @@ html, body { -ms-overflow-style: none; scrollbar-width: none; }
   .iab-banner { display: none; }
 }
 
+/* Make the interactive layer fully cover with the same solid background */
 .gate__hit {
   all: unset;
   cursor: pointer;
-  position: relative;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  background: #424242; /* same as .gate background */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 4vh, 28px);
+  /* keep content clear of notches and home indicators; make left/right symmetric so visual center stays true */
+  padding-top:    max(16px, env(safe-area-inset-top));
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  padding-left:   max(16px, max(env(safe-area-inset-left),  env(safe-area-inset-right)));
+  padding-right:  max(16px, max(env(safe-area-inset-left),  env(safe-area-inset-right)));
+  text-align: center;
+  /* compensate asymmetric safe-area insets (e.g., landscape notch) to keep true viewport center */
+  transform: translateX(calc((env(safe-area-inset-right) - env(safe-area-inset-left)) / 2));
+  will-change: transform;
   /* Enhanced touch handling for in-app browsers */
   -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
 }
 .gate__msg {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  font-family: 'Playfair Display', serif; text-align: center; max-width: min(92vw, 720px);
+  position: static;
+  left: auto; top: auto; transform: none;
+  font-family: 'Playfair Display', serif; text-align: center; max-width: min(90vw, 640px);
   font-size: clamp(18px, 5vw, 32px); line-height: 1.25; letter-spacing: 0.04em;
-  color: #fefff4; opacity: 1; transition: opacity .6s ease, transform .6s ease;
+  color: #fefff4; opacity: 1; transition: opacity .6s ease;
   padding: 0 12px;
+  margin: 0 auto;
 }
 .gate__logo {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.975);
-  display: block; margin: 0; height: auto; opacity: 0; /* start hidden for fade-in */
-  width: min(52vw, 36vh); /* proportionnel à l'écran */
+  position: static;
+  left: auto; top: auto; transform: scale(0.975);
+  display: block; margin: 0 auto; height: auto; opacity: 0; /* start hidden for fade-in */
+  width: clamp(140px, min(52vw, 36vh), 360px); /* proportionnel à l'écran, borne min/max */
   max-width: min(380px, calc(100vw - 48px));
   max-height: min(44vh, 44dvh);
   transition: opacity 2000ms cubic-bezier(0.16,1,0.3,1), filter 2000ms cubic-bezier(0.16,1,0.3,1);
@@ -635,36 +802,97 @@ html, body { -ms-overflow-style: none; scrollbar-width: none; }
 
   user-select: none; -webkit-user-select: none; pointer-events: none; -webkit-user-drag: none;
 }
+
+/* Bookmark (signet) button on chapter cards */
+.card__fav {
+  position: absolute; top: 10px; right: 10px;
+  width: 36px; height: 36px; border-radius: 18px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.08); color: #fefff4; border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+}
+.card__fav.is-on { background: #ffff80; color: #1f2023; border-color: #1f2023; font-weight: 800; }
+.card__fav:focus-visible { outline: 2px solid #ffff80; outline-offset: 2px; }
+
+/* Reader header bookmark button */
+.reader__fav {
+  all: unset; cursor: pointer;
+  display: inline-grid; place-items: center;
+  width: 28px; height: 28px; border-radius: 14px;
+  margin-right: 8px;
+  background: rgba(255,255,255,0.12); color: #fefff4; border: 1px solid rgba(255,255,255,0.2);
+}
+.reader__fav.is-on { background: #ffff80; color: #1f2023; border-color: #1f2023; font-weight: 800; }
+.reader__fav:focus-visible { outline: 2px solid #ffff80; outline-offset: 2px; }
+
+/* Very small height (landscape phones): reduce sizes a bit */
+@media (max-height: 560px) {
+  .gate__hit { gap: clamp(8px, 3vh, 18px); }
+  .gate__msg { font-size: clamp(16px, 4vw, 24px); }
+  .gate__logo { max-height: 32vh; width: clamp(120px, min(42vw, 28vh), 300px); }
+}
+.gate__logo svg { display:block; width:100%; height:auto; color: inherit; }
+.gate__logo [fill]:not([fill="none"]) { fill: currentColor; }
+.gate__logo [stroke]:not([stroke="none"]) { stroke: currentColor; }
+.gate.is-starting .gate__msg { opacity: 0; transform: none; }
+.gate.is-starting .gate__logo { opacity: 1; }
+.gate.is-finishing .gate__msg, .gate.is-finishing .gate__logo { opacity: 0; }
+.gate.is-finishing { opacity: 0; transition: opacity 360ms ease; }
+.gate.is-logo .gate__msg { display: none !important; }
+.gate.is-logo .gate__logo { opacity: 1 !important; filter: drop-shadow(0 10px 30px rgba(0,0,0,0.6)) blur(0); animation: gate-zoom 7000ms cubic-bezier(0.16,1,0.3,1) forwards; transform-origin: 50% 50%; }
+@keyframes gate-zoom {
+  0% { transform: scale(0.98); }
+  100% { transform: scale(1.02); }
+}
+
+/* =============================
+   Gate Centering Overrides (final)
+   ============================= */
+.gate__hit { padding: 0 !important; transform: none !important; }
+.gate__center {
+  position: absolute; left: 50%; top: 0; bottom: 0; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: clamp(12px, 4vh, 28px);
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  padding-left:  max(16px, max(env(safe-area-inset-left),  env(safe-area-inset-right)));
+  padding-right: max(16px, max(env(safe-area-inset-left),  env(safe-area-inset-right)));
+  width: 100%; text-align: center;
+}
+.gate__msg {
+  position: static !important; left: auto !important; top: auto !important; transform: none !important;
+  margin-left: auto !important; margin-right: auto !important;
+  max-width: min(90vw, 640px) !important;
+}
+.gate__logo {
+  position: static !important; left: auto !important; top: auto !important; transform: none !important;
+  display: block !important; margin-left: auto !important; margin-right: auto !important;
+  transform-origin: 50% 50% !important;
+  width: clamp(140px, min(52vw, 36vh), 360px) !important;
+  max-width: min(380px, calc(100vw - 48px)) !important;
+  max-height: min(44vh, 44dvh) !important;
+}
 /* When inline SVG is used */
 .gate__logo svg { display:block; width:100%; height:auto; color: inherit; }
 .gate__logo [fill]:not([fill="none"]) { fill: currentColor; }
 .gate__logo [stroke]:not([stroke="none"]) { stroke: currentColor; }
-.gate.is-starting .gate__msg { opacity: 0; transform: translateY(-12px); }
+.gate.is-starting .gate__msg { opacity: 0; transform: none; }
 .gate.is-starting .gate__logo { opacity: 1; }
 .gate.is-finishing .gate__msg, .gate.is-finishing .gate__logo { opacity: 0; }
-/* lock final zoom at fade-out to avoid snap back */
-.gate.is-finishing .gate__logo { transform: translate(-50%, -50%) scale(1.03); transition: opacity 500ms ease; }
-.gate.is-finishing { opacity: 0; transition: opacity 500ms ease; }
-
+.gate.is-finishing { opacity: 0; transition: opacity 360ms ease; }
 /* Instant logo state: no fade/crossfade, message hidden */
 .gate.is-logo .gate__msg { display: none !important; }
 .gate.is-logo .gate__logo { opacity: 1 !important; filter: drop-shadow(0 10px 30px rgba(0,0,0,0.6)) blur(0); animation: gate-zoom 7000ms cubic-bezier(0.16,1,0.3,1) forwards; transform-origin: 50% 50%; }
-
 @keyframes gate-zoom {
-  0% { transform: translate(-50%, -50%) scale(0.98); }
-  100% { transform: translate(-50%, -50%) scale(1.02); }
+  0% { transform: scale(0.98); }
+  100% { transform: scale(1.02); }
 }
-
 
 /* When fading out, let scroll/pan pass through immediately */
-.gate.is-finishing {
-  pointer-events: none;
-}
+.gate.is-finishing { pointer-events: none; }
 
 /* Media queries adjustments for gate logo */
-/* logo sizing already proportional; media blocks no longer required */
-
-/* Better mobile scroll prevention with special in-app browser handling */
+/* logo sizing already proportional; media blocks no longer required *//* Better mobile scroll prevention with special in-app browser handling */
 .no-scroll { 
   overflow: hidden !important; 
   height: 100vh; 
@@ -940,3 +1168,35 @@ body.force-mobile .hero { padding: 24px 16px !important; height: 62vh !important
 
 
 
+
+
+/* =============================
+   Gate Centering Overrides (final)
+   Ensure strict horizontal centering on all devices
+   ============================= */
+.gate__hit { transform: none !important; }
+.gate__msg {
+  position: static !important;
+  left: auto !important; top: auto !important; transform: none !important;
+  margin-left: auto !important; margin-right: auto !important;
+  text-align: center !important;
+  max-width: min(90vw, 640px) !important;
+}
+.gate__logo {
+  position: static !important;
+  left: auto !important; top: auto !important; transform: none !important;
+  display: block !important;
+  margin-left: auto !important; margin-right: auto !important;
+  transform-origin: 50% 50% !important;
+  width: clamp(140px, min(52vw, 36vh), 360px) !important;
+  max-width: min(380px, calc(100vw - 48px)) !important;
+  max-height: min(44vh, 44dvh) !important;
+}
+.gate.is-starting .gate__msg { transform: none !important; }
+.gate.is-finishing .gate__logo { transform: scale(1.03) !important; }
+
+/* Re-declare keyframes to remove any residual translate from earlier blocks */
+@keyframes gate-zoom {
+  0% { transform: scale(0.98); }
+  100% { transform: scale(1.02); }
+}

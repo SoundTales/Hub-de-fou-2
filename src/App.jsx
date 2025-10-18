@@ -1,6 +1,7 @@
 ﻿import { useEffect, useRef, useState } from 'react'
 import ReaderShell from './reader/ReaderShell.jsx'
 import { getAudioEngine } from './reader/audioSingleton.js'
+import { createPortal } from 'react-dom'
 import { getTales, getEntitlements } from './api/client.js'
 import HubSplashLogo from './HubSplashLogo.jsx'
 
@@ -8,8 +9,11 @@ export default function App() {
   const eyebrowRef = useRef(null)
   const titleRef = useRef(null)
   const actionsRef = useRef(null)
+  const gateRef = useRef(null)
   const [showFab, setShowFab] = useState(false)
-  const [showGate, setShowGate] = useState(true)
+  const [showGate, setShowGate] = useState(() => {
+    try { return sessionStorage.getItem('hub:gateDismissed') === '1' ? false : true } catch { return true }
+  })
   const [gateState, setGateState] = useState('idle')
   // Fix baseUrl to work in both dev and production
   const baseUrl = import.meta.env.BASE_URL || './'
@@ -21,6 +25,13 @@ export default function App() {
   const [tales, setTales] = useState([])
   const [ents, setEnts] = useState(null)
   const [loadingTales, setLoadingTales] = useState(true)
+  // Bookmarks panel state
+  const [showBmPanel, setShowBmPanel] = useState(false)
+  const [bmItems, setBmItems] = useState([])
+  const [bmOrigin, setBmOrigin] = useState({ left: null, top: null, side: 'bottom', from: 'quickbar' })
+  const [favTick, setFavTick] = useState(0)
+  // Scroll-to-top visibility (quickbar)
+  const [showScrollTop, setShowScrollTop] = useState(false)
 
   // Simple hash-based routing to isolate the reader from the hub
   const [route, setRoute] = useState(() => window.location.hash || '#/')
@@ -170,6 +181,7 @@ export default function App() {
     const onFs = () => {
       const fsEl = document.fullscreenElement || document.webkitFullscreenElement
       setIsFullscreen(!!fsEl)
+      try { sessionStorage.setItem('hub:fs', fsEl ? '1' : '0') } catch {}
       if (!fsEl && window.innerWidth < 769) {
         document.body.classList.add('force-mobile')
         setTimeout(() => document.body.classList.remove('force-mobile'), 1500)
@@ -189,6 +201,7 @@ export default function App() {
     try {
       document.documentElement.classList.add('pseudo-fullscreen')
       document.body.classList.add('pseudo-fullscreen')
+      try { sessionStorage.setItem('hub:pseudoFS','1') } catch {}
       const apply = () => {
         try { document.documentElement.style.setProperty('--inner-h', `${window.innerHeight}px`) } catch {}
         try { window.scrollTo(0, 1) } catch {}
@@ -230,6 +243,8 @@ export default function App() {
     try {
       document.documentElement.classList.remove('pseudo-fullscreen')
       document.body.classList.remove('pseudo-fullscreen')
+      sessionStorage.setItem('hub:pseudoFS','0')
+      sessionStorage.setItem('hub:fs','0')
     } catch {}
   }
 
@@ -278,10 +293,170 @@ export default function App() {
     } catch {}
   }
 
+  // Open/toggle the bookmarks popover anchored to the triggering button
+  const openBookmarksPanel = (e, from = 'quickbar') => {
+    // Toggle close if opened from the same origin
+    if (showBmPanel && bmOrigin?.from === from) {
+      setShowBmPanel(false)
+      try { e?.currentTarget?.blur() } catch {}
+      return
+    }
+    try {
+      const tale = tales?.[0]
+      const taleId = tale?.id || 'tale1'
+      const chapters = Array.isArray(tale?.chapters) ? tale.chapters : []
+      const items = []
+      for (const ch of chapters) {
+        const cid = String(ch?.id || '')
+        if (!cid) continue
+        let fav = false
+        try { fav = (localStorage.getItem(`hub:fav:${taleId}:${cid}`) === '1') } catch { fav = false }
+        if (fav) {
+          items.push({ chapterId: cid, title: ch?.title || `Chapitre ${cid}`, count: 1, pageIndex: 0 })
+        }
+      }
+      setBmItems(items)
+      // Compute anchor from triggering element
+      try {
+        const btn = e?.currentTarget
+        if (btn) {
+          const r = btn.getBoundingClientRect()
+          const gap = 10
+          // default: bottom placement
+          let side = 'bottom'
+          let left = Math.round(r.left + r.width / 2)
+          let top = Math.round(r.bottom + gap)
+          if (from === 'quickbar') {
+            side = 'left'
+            left = Math.round(r.left - gap)
+            top = Math.round(r.top + r.height / 2)
+          } else if (from === 'hero') {
+            const landscape = (() => { try { return window.matchMedia('(orientation: landscape)').matches } catch { return false } })()
+            if (window.innerWidth >= 1024 || (landscape && window.innerWidth >= 768)) {
+              side = 'right'
+              left = Math.round(r.right + gap)
+              top = Math.round(r.top + r.height / 2)
+            }
+          }
+          // Clamp and avoid quickbar area
+          const vw = Math.max(320, window.innerWidth || 0)
+          const isPortrait = (() => { try { return window.matchMedia('(orientation: portrait)').matches } catch { return vw < (window.innerHeight||0) } })()
+          const margin = 16
+          const panelWidthFor = (s) => {
+            if (s === 'left') {
+              if (isPortrait && vw <= 480) return Math.min(vw * 0.86, 320)
+              if (isPortrait && vw <= 1024) return Math.min(vw * 0.80, 360)
+              return Math.min(vw * 0.92, 360)
+            }
+            if (s === 'bottom') {
+              if (isPortrait && vw <= 480) return Math.min(vw * 0.96, 420)
+              if (isPortrait && vw <= 1024) return Math.min(vw * 0.92, 420)
+              return Math.min(vw * 0.92, 420)
+            }
+            if (isPortrait && vw <= 480) return Math.min(vw * 0.92, 360)
+            if (isPortrait && vw <= 1024) return Math.min(vw * 0.92, 420)
+            return Math.min(vw * 0.92, 420)
+          }
+          const pw = panelWidthFor(side)
+          // avoid quickbar column if visible
+          try {
+            const qbVisible = !!(showFab && !showGate)
+            const qb = document.querySelector('.quickbar')
+            if (qbVisible && qb) {
+              const qbr = qb.getBoundingClientRect()
+              const avoidRight = Math.max(0, qbr.left - margin)
+              if (side === 'bottom') {
+                const centerMax = avoidRight - pw / 2
+                left = Math.min(left, centerMax)
+              } else if (side === 'right') {
+                left = Math.min(left, avoidRight - pw)
+              }
+            }
+          } catch {}
+          if (side === 'left') {
+            left = Math.max(margin + pw + 8, left)
+          } else if (side === 'right') {
+            left = Math.min(vw - margin - pw, left)
+            left = Math.max(margin, left)
+          } else {
+            const minLeft = margin + pw / 2
+            const maxLeft = vw - margin - pw / 2
+            left = Math.max(minLeft, Math.min(left, maxLeft))
+            try {
+              const qbVisible = !!(showFab && !showGate)
+              const qb = document.querySelector('.quickbar')
+              if (qbVisible && qb) {
+                const qbr = qb.getBoundingClientRect()
+                const avoidRight = Math.max(0, qbr.left - margin)
+                const maxLeftQB = avoidRight - pw / 2
+                left = Math.max(minLeft, Math.min(left, maxLeftQB))
+              }
+            } catch {}
+          }
+          // vertical clamp
+          const minY = 40
+          const maxY = Math.max(minY + 1, (window.innerHeight || 0) - 40)
+          top = Math.max(minY, Math.min(top, maxY))
+          setBmOrigin({ left, top, side, from })
+        } else {
+          setBmOrigin({ left: null, top: null, side: 'bottom', from })
+        }
+      } catch { setBmOrigin({ left: null, top: null, side: 'bottom', from }) }
+      setShowBmPanel(true)
+    } catch {
+      setBmItems([])
+      setShowBmPanel(true)
+    }
+    try { e?.currentTarget?.blur() } catch {}
+  }
+
+  // Scroll-to-top hint (hub only): shows on upward scroll, hides with quickbar
+  useEffect(() => {
+    if (isReaderRoute || showGate) { setShowScrollTop(false); return }
+    // If quickbar is off, also hide scrolltop to keep sync
+    if (!showFab) { setShowScrollTop(false) }
+    let last = Math.max(0, window.scrollY || document.documentElement.scrollTop || 0)
+    let sticky = false, ticking = false
+    const evalState = () => {
+      const y = Math.max(0, window.scrollY || document.documentElement.scrollTop || 0)
+      const up = y < last - 4
+      const down = y > last + 4
+      const deep = y > 150
+      if (!sticky) {
+        if (deep && up && showFab) { sticky = true; setShowScrollTop(true) }
+      } else {
+        if (down || !showFab) { sticky = false; setShowScrollTop(false) }
+      }
+      last = y; ticking = false
+    }
+    const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(evalState) } }
+    const onResize = onScroll
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onResize, { passive: true })
+    evalState()
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onResize) }
+  }, [isReaderRoute, showGate, showFab])
+
+  // Sync favorites across contexts (e.g., when toggled in reader)
+  useEffect(() => {
+    const onStorage = (ev) => {
+      try {
+        if (typeof ev?.key === 'string' && ev.key.startsWith('hub:fav:')) {
+          setFavTick((t) => t + 1)
+        }
+      } catch {}
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
   const startGate = async () => {
     if (gateState !== 'idle') return
-    // Instantly switch to logo state (no crossfade with the message)
-    setGateState('logo')
+    // Lock layout immediately to prevent any underlay paint during viewport changes
+    try {
+      document.documentElement.classList.add('gate-lock')
+      document.body.classList.add('gate-lock')
+    } catch {}
     // Detect in-app browsers
     const userAgent = navigator.userAgent || navigator.vendor || window.opera
     const isInAppBrowser = /FBAN|FBAV|Instagram|Messenger|Line\//i.test(userAgent) || /; wv\)/i.test(userAgent)
@@ -290,9 +465,53 @@ export default function App() {
     if (!isInAppBrowser && window.innerWidth > 768) {
       document.body.classList.add('no-scroll')
     }
-    
-    // Don't await here to preserve user gesture chain for audio
-    try { getAudioEngine().ensureStarted() } catch {} ; enterFullscreen()
+    // Add structural veil immediately to avoid any flash during viewport changes
+    try {
+      let veil = document.getElementById('gate-veil')
+      if (!veil) {
+        veil = document.createElement('div')
+        veil.id = 'gate-veil'
+        Object.assign(veil.style, {
+          position: 'fixed', left: '0', top: '0', right: '0', bottom: '0',
+          background: '#424242', zIndex: '99999', pointerEvents: 'none'
+        })
+        document.body.appendChild(veil)
+      }
+    } catch {}
+    // Force a reflow so veil/gate-lock are painted before fullscreen height change
+    try { void document.body.offsetHeight } catch {}
+
+    // Lock gate element size to visual viewport during transition
+    const lockGateSize = () => {
+      try {
+        const h = (window.visualViewport && Math.ceil(window.visualViewport.height)) || window.innerHeight || 0
+        const el = gateRef.current
+        if (el && h) {
+          el.style.height = h + 'px'
+          el.style.minHeight = h + 'px'
+          el.style.width = '100vw'
+        }
+      } catch {}
+    }
+    lockGateSize()
+    const __gateSizeCleanups = []
+    try {
+      const onVv = () => lockGateSize()
+      if (window.visualViewport && typeof window.visualViewport.addEventListener === 'function') {
+        window.visualViewport.addEventListener('resize', onVv, { passive: true })
+        __gateSizeCleanups.push(() => window.visualViewport.removeEventListener('resize', onVv))
+      }
+      const onWin = () => lockGateSize()
+      window.addEventListener('resize', onWin, { passive: true })
+      __gateSizeCleanups.push(() => window.removeEventListener('resize', onWin))
+    } catch {}
+
+    // Request fullscreen within the same gesture (do not await)
+    try { enterFullscreen() } catch {}
+    // Prime audio in the same gesture chain
+    try { getAudioEngine().ensureStarted() } catch {}
+    // Switch to logo once guard layers are active and FS requested
+    setGateState('logo')
     let finished = false
     const finish = () => {
       if (finished) return
@@ -300,8 +519,21 @@ export default function App() {
       setGateState('finishing')
       // Remove no-scroll class when gate is finishing
       document.body.classList.remove('no-scroll')
-      // keep DOM long enough for CSS fade (500ms) to complete comfortably
-      setTimeout(() => setShowGate(false), 650)
+      // Persist dismissal and keep DOM long enough for CSS fade (500ms)
+      try { sessionStorage.setItem('hub:gateDismissed','1') } catch {}
+      setTimeout(() => {
+        try {
+          const veil = document.getElementById('gate-veil')
+          if (veil) veil.remove()
+          // cleanup gate sizing locks
+          for (const fn of __gateSizeCleanups) { try { fn() } catch {} }
+          const el = gateRef.current
+          if (el) { el.style.height = ''; el.style.minHeight = ''; el.style.width = '' }
+          document.documentElement.classList.remove('gate-lock')
+          document.body.classList.remove('gate-lock')
+        } catch {}
+        setShowGate(false)
+      }, 650)
     }
 
     try {
@@ -362,6 +594,22 @@ export default function App() {
     }
   }
 
+  // On hub refresh: keep hub (no gate) and try to restore fullscreen state
+  useEffect(() => {
+    if (isReaderRoute) return
+    try {
+      const dismissed = sessionStorage.getItem('hub:gateDismissed') === '1'
+      if (dismissed) setShowGate(false)
+      const wasFS = sessionStorage.getItem('hub:fs') === '1'
+      const wasPseudo = sessionStorage.getItem('hub:pseudoFS') === '1'
+      if (wasFS) {
+        enterFullscreen().catch(() => { if (wasPseudo) enablePseudoFullscreen() })
+      } else if (wasPseudo) {
+        enablePseudoFullscreen()
+      }
+    } catch {}
+  }, [isReaderRoute])
+
   // Floating actions bar visibility when hero actions are off-screen
   useEffect(() => {
     const target = actionsRef.current
@@ -382,6 +630,67 @@ export default function App() {
 
   return (
     <div className="page" data-role="hub">
+      {/* Quick actions on the right: Play, Bookmark */}
+      {(!isReaderRoute) && (
+        <div
+          className={`quickbar ${(showFab && !showGate) ? 'is-on' : 'is-off'}`}
+          role="region"
+          aria-label="Actions rapides"
+          aria-hidden={!(showFab && !showGate)}
+        >
+          {/* Scroll-to-top at the top of the stack */}
+          <button
+            className={`qbtn ${showScrollTop ? '' : 'is-hidden'}`}
+            type="button"
+            onClick={(e) => { try { window.scrollTo({ top: 0, behavior: 'smooth' }) } catch { window.scrollTo(0,0) } finally { try { e.currentTarget.blur() } catch {} } }}
+            aria-hidden={!showScrollTop}
+            aria-label="Remonter en haut"
+            title="Remonter"
+          >
+            <span className="qicon">↑</span>
+          </button>
+          <button
+            className="qbtn qbtn--primary"
+            type="button"
+            onClick={(e) => {
+              try { getAudioEngine().ensureStarted() } catch {}
+              const primary = tales?.[0]
+              const taleId = primary?.id || 'tale1'
+              let prog = null
+              try { prog = JSON.parse(localStorage.getItem(`reader:progress:${taleId}`) || 'null') } catch {}
+              let targetChapter = primary?.chapters?.[0]?.id || '1'
+              let resume = null
+              if (prog && prog.chapterId) {
+                targetChapter = String(prog.chapterId)
+                resume = { chapterId: String(prog.chapterId), pageIndex: Math.max(0, parseInt(prog.pageIndex || 0, 10) || 0) }
+              }
+              const chapterId = String(targetChapter)
+              const img = primary?.cover || `https://picsum.photos/800/450?random=${chapterId}`
+              const payload = { id: String(chapterId), img, title: primary?.title || 'OSRASE' }
+              try {
+                sessionStorage.setItem('reader:splash', JSON.stringify(payload))
+                if (resume) sessionStorage.setItem('reader:resume', JSON.stringify(resume))
+                else sessionStorage.removeItem('reader:resume')
+              } catch {}
+              window.location.hash = `#/reader/${chapterId}`
+              try { e.currentTarget.blur() } catch {}
+            }}
+            aria-label="Lire/Reprendre"
+            title="Lire/Reprendre"
+          >
+            <img className="qicon qicon--svg" src={`${baseUrl}icons/play.svg`} alt="" aria-hidden="true" />
+          </button>
+          <button
+            className="qbtn qbtn--bookmark"
+            type="button"
+            onClick={(e) => openBookmarksPanel(e, 'quickbar')}
+            aria-label="Signets: chapitres favoris"
+            title="Ouvrir les signets"
+          >
+            <span className="qicon" aria-hidden="true">🔖</span>
+          </button>
+        </div>
+      )}
       {!isReaderRoute && !showGate && (
         <button
           className="fs-btn"
@@ -456,7 +765,7 @@ export default function App() {
                 window.location.hash = `#/reader/${chapterId}`
               }}
             >{(() => { const primary = tales?.[0]; const taleId = primary?.id || 'tale1'; try { return localStorage.getItem(`reader:progress:${taleId}`) ? 'Reprendre le tale' : 'LIRE LE TALE' } catch { return 'LIRE LE TALE' } })()}</button>
-            <button className="hero__bookmark" type="button" aria-label="Ajouter aux favoris">
+            <button className="hero__bookmark" type="button" aria-label="Ouvrir les signets" onClick={(e) => openBookmarksPanel(e, 'hero')}>
               <svg className="hero__bookmark-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1z" />
               </svg>
@@ -473,6 +782,7 @@ export default function App() {
           const unlocked = !!(ents?.tales?.[taleId] || ents?.chapters?.[`${taleId}:${chapterId}`])
           const label = ch?.title || `Chapitre ${chapterId}`
           const img = tale?.cover || `https://picsum.photos/800/450?random=${chapterId}`
+          const fav = (() => { try { return localStorage.getItem(`hub:fav:${taleId}:${chapterId}`) === '1' } catch { return false } })()
           return (
             <article
               key={chapterId}
@@ -492,6 +802,24 @@ export default function App() {
                 window.location.hash = `#/reader/${chapterId}`
               }}}
             >
+              {!loadingTales && (
+                <button
+                  type="button"
+                  className={`card__fav ${fav ? 'is-on' : ''}`}
+                  aria-label={fav ? 'Retirer des signets' : 'Ajouter aux signets'}
+                  aria-pressed={fav}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    try {
+                      const key = `hub:fav:${taleId}:${chapterId}`
+                      if (localStorage.getItem(key) === '1') localStorage.removeItem(key)
+                      else localStorage.setItem(key, '1')
+                    } catch {}
+                    setFavTick(t => t + 1)
+                  }}
+                  title={fav ? 'Retirer des signets' : 'Ajouter aux signets'}
+                ><svg className="hero__bookmark-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1z" /></svg></button>
+              )}
               <h2 className="card__label">{label}</h2>
               <div
                 className="card__media"
@@ -504,28 +832,69 @@ export default function App() {
           )
         })}
       </main>
-      {showGate && (
-        <div className={`gate ${gateState === 'starting' ? 'is-starting' : ''} ${(gateState === 'logo' || gateState === 'finishing') ? 'is-logo' : ''} ${gateState === 'finishing' ? 'is-finishing' : ''}`}>
+      {showBmPanel && (
+        <div className="bm-mask" role="dialog" aria-modal="true" aria-label="Signets" onClick={() => setShowBmPanel(false)}>
+          <div
+            className={`bm-panel ${bmOrigin.side ? `bm--${bmOrigin.side}` : ''} ${bmOrigin.from ? `bm-from-${bmOrigin.from}` : ''}`}
+            role="document"
+            style={(() => {
+              const s = {}
+              if (typeof bmOrigin.left === 'number') s['--bm-left'] = bmOrigin.left + 'px'
+              if (typeof bmOrigin.top === 'number') s['--bm-top'] = bmOrigin.top + 'px'
+              return s
+            })()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bm-head">
+              <div className="bm-title">Signets</div>
+              <button className="bm-close" aria-label="Fermer" onClick={() => setShowBmPanel(false)}>×</button>
+            </div>
+            <div className="bm-list">
+              {bmItems.length === 0 && (
+                <div className="bm-empty">Aucun chapitre en signet</div>
+              )}
+              {bmItems.map(it => (
+                <button key={it.chapterId} className="bm-item" onClick={() => {
+                  try { getAudioEngine().ensureStarted() } catch {}
+                  const tale = tales?.[0]
+                  const taleId = tale?.id || 'tale1'
+                  const chapterId = String(it.chapterId)
+                  const img = tale?.cover || `https://picsum.photos/800/450?random=${chapterId}`
+                  const payload = { id: String(chapterId), img, title: tale?.title || 'OSRASE' }
+                  try {
+                    sessionStorage.setItem('reader:splash', JSON.stringify(payload))
+                    sessionStorage.setItem('reader:resume', JSON.stringify({ chapterId, pageIndex: it.pageIndex }))
+                  } catch {}
+                  window.location.hash = `#/reader/${chapterId}`
+                }}>
+                  <span className="bm-label">{it.title}</span>
+                  <span className="bm-badge" aria-label={`${it.count} page(s) marquée(s)`}>{it.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {showGate && createPortal(
+        <div ref={gateRef} className={`gate ${gateState === 'starting' ? 'is-starting' : ''} ${(gateState === 'logo' || gateState === 'finishing') ? 'is-logo' : ''} ${gateState === 'finishing' ? 'is-finishing' : ''}`}>
           <button className="gate__hit" aria-label="Lancer la liseuse" onClick={startGate}>
-            <span className="gate__msg">Touchez l'écran pour lancer la liseuse</span>
-            <HubSplashLogo baseUrl={baseUrl} />
+            <div className="gate__center">
+              <span className="gate__msg">Touchez l'écran pour lancer la liseuse</span>
+              <HubSplashLogo baseUrl={baseUrl} />
+            </div>
           </button>
-        </div>
-      )}
+        </div>, document.body)
+      }
 
-      {showFab && (
-        <div className="fab" role="region" aria-label="Actions rapides">
-          <button className="hero__cta" type="button">LIRE LE TALE</button>
-          <button className="hero__bookmark" type="button" aria-label="Ajouter aux favoris">
-            <svg className="hero__bookmark-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1z" />
-            </svg>
-          </button>
-        </div>
-      )}
+      {/* Deprecated FAB removed in favor of .quickbar */}
     </div>
   )
 }
+
+
+
+
+
 
 
 
