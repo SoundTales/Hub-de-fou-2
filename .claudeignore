@@ -1,0 +1,41 @@
+# Dépendances
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Artéfacts de build
+dist/
+build/
+coverage/
+.storybook-static/
+
+# Contrôle de version et IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Caches
+.cache/
+.tmp/
+.temp/
+.parcel-cache/
+.turbo/
+.eslintcache
+
+# Logs et temporaires
+*.log
+*.tmp
+*.swp
+npm-debug.log*
+yarn-error.log*
+
+# Environnements
+.env
+.env.*
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
