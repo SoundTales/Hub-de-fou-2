@@ -179,7 +179,8 @@ Ce dépôt contient le hub de lecture OSRASE (React + Vite) et prépare la liseu
 
 ## Chat Handoff (Synthèse concise)
 - Splash lecteur: s’affiche une fois par session ET par chapitre.
-  - Clé session: eader:splashSeen:<chapterId>; montré si absent, marqué à la fin du splash.
+  - Clé session: 
+eader:splashSeen:<chapterId>; montré si absent, marqué à la fin du splash.
   - Contenu: fond #FEFFF4, image chap., badge numéro + titre en fade; pas de son; min hold ~2.2s.
 - Bannière in‑app: full avant première action → compact (un bouton) sur le hub → jamais en liseuse.
 - Navigation liseuse: sans scroll; swipe → page ±1; double‑tap → overlay; tap dialogue → voix; long‑press → partage TikTok (plus tard).
@@ -258,7 +259,7 @@ Ce bloc résume les décisions prises et le système audio/overlay en place pour
   - Routes: hub par défaut; liseuse `/#/reader/:chapterId`. Scopes via `body[data-mode]`.
   - In‑app: pseudo‑fullscreen si Fullscreen API indisponible; safe‑areas (`env()`), `100dvh`. Respect `prefers-reduced-motion`.
 
-## Nouveau chat – Prompt de démarrage conseillé
+## Nouveau chat - Prompt de démarrage conseillé
 
 Tu es Codex dans un projet React 18 + Vite (react-swc). Respecte strictement ces règles:
 
@@ -269,4 +270,106 @@ Tu es Codex dans un projet React 18 + Vite (react-swc). Respecte strictement ces
 - Données: hub dynamique via `getTales()` + entitlements mock; Stripe mock; jamais débloquer côté client.
 - Routes: hub par défaut; liseuse `/#/reader/:chapterId`; scoper via `body[data-mode]`. In‑app: pseudo‑fullscreen, safe‑areas.
 
-Quand tu prends une nouvelle tâche, propose un plan court et applique ces règles (audio dans la chaîne du geste, transitions GPU‑friendly, pas d’autoplay voix, séparation hub/liseuse).
+Quand tu prends une nouvelle tâche, propose un plan court et applique ces règles (audio dans la chaîne du geste, transitions GPU-friendly, pas d'autoplay voix, séparation hub/liseuse).
+
+
+## Chat Handoff - Session Update (Oct 2025)
+
+Ce qui a été fait et validé dans le code (hub + liseuse):
+
+- Refactor hub: `Gate`, `IABanner`, `Quickbar`, `BookmarksPanel` extraits de `src/App.jsx` pour alléger et clarifier.
+- Utilitaires: `src/utils/ua.ts` (détection in‑app) et `src/utils/storage.ts` (accès local/session sûrs).
+- Gestes: double‑tap détecté via `pointerdown` (latence réduite in‑app); swipe avec seuils documentés (40 px, |dx| > |dy|, vitesse ≥ 0.3 px/ms).
+- A11y: focus trap + Esc pour le panneau Signets (hub) et pour l’overlay lecteur (`role="dialog"`, `aria-modal="true"`).
+- Audio: prime dans la chaîne du geste (`gesturePrime.js`), moteur unique `AudioEngine` (cues crossfade, ducking voix, fallback HTMLAudio, préfetch LRU, métriques p95).
+- In‑app: `enterFullscreen()` unifié sur `detectInApp()`, pseudo‑fullscreen + `--inner-h` appliqués.
+- Icônes: remplacement des placeholders par SVG (thème, home, dialogue). Dialogue: SVG inline + fallback CSS `.dlg__icon` en data‑URI.
+- Normalisation FR/UTF‑8: libellés corrigés (ex.: “PRÉSENTE”, “plein écran”, “À JAMAIS, POUR TOUJOURS”, “Chapitre verrouillé”, “nécessite…”).
+
+Fichiers clés à consulter en priorité:
+
+- Hub: `src/App.jsx`, `src/HubSplashLogo.jsx`, `src/styles.css`, `src/utils/ua.ts`, `src/ui/*`.
+- Liseuse: `src/reader/ReaderShell.jsx`, `src/reader/PageViewport.jsx`, `src/reader/AudioEngine.js`, `src/reader/useChapter.js`, `src/reader/Chunker.js`.
+- Entrées/Vite: `src/index.html`, `src/main.jsx`, `vite.config.js`.
+- Mocks/API: `src/api/client.js`, `docs/mock/*` (si présents).
+
+À poursuivre (priorité esthétique liseuse):
+
+- Overlay: topbar nette, icônes cohérentes, transitions douces; focus trap déjà en place.
+- Rails musique/voix: style verre/blur, `touch-action: pan-y`, états actifs.
+- Thèmes: nuit/jour (contrastes, tokens couleurs), transition respectant `prefers-reduced-motion`.
+- Transitions pages: slide/fade léger selon direction, sans surcharge perf.
+- Carrousel/dock: badges, vignettes, navigation claire.
+- Penser la structure et la forme que dois avoir la liseuse pour être la plus éfficace possible.
+
+Esthétique de la liseuse :
+
+Intention Générale
+
+Sensation “édition premium” et confort de lecture papier: page ivoire chaude, encre sombre, rythme ample, hiérarchies nettes.
+Ambiance sobre, musicale et éditoriale: peu de couleurs, beaucoup de respiration, accents discrets.
+Palette
+
+Fond page: ivoire chaud (papier crème) uniforme.
+Encre: noir/gris anthracite très profond pour le texte.
+Panneaux/overlays: anthracite plein avec coins très arrondis.
+Accent principal: jaune pastel doux (rubans CTA, états actifs, jauge).
+Accent secondaire: olive/vert-jaune pâle pour labels et chiffres secondaires.
+Filets et repères: gris clair, très fins.
+Typographies
+
+Titres: serif à fort contraste (style Playfair), uppercase, tracking élargi, centrés.
+Corps: serif classique (Libre Baskerville), corps généreux (~18–20 px), interligne ample (~1.6–1.7).
+Numérotations “1/21”: petits caps/figures élégantes, très sobre.
+Dialogues: nom du locuteur en gras suivi d’un deux-points, le reste en romain.
+Grille et Marges
+
+Large marge haute sous le titre, colonnes larges (peu de mots par ligne), respiration verticale marquée entre paragraphes.
+Aucun scroll dans la liseuse; navigation horizontale bandeau‑plein.
+Traitement des Dialogues
+
+Indicateur bulle noir + filet vertical gris à gauche.
+Bloc dialogue aligné sur le flux du texte, hiérarchie évidente Nom: réplique.
+État “lu” atténué (opacité/greyscale), sans casser le rythme du paragraphe.
+En‑tête de Lecture
+
+Titre du livre centré en caps, au-dessus du compteur de pages “x/xx”.
+Actions minimales: favori (icône marque‑page) à gauche; à droite, réglages texte (B / A+ / Aa) sous forme de pilules.
+Overlay Lecteur (esthétique)
+
+Voile fond dégradé sombre vers le bas; panneau “verre” sombre doux, coins très arrondis.
+Topbar overlay: titres caps fins, séparateurs filets ultra-légers, pilules contrastées pour la taille du texte.
+Carrousel: vignettes sepia/monochromes, mini-badge rond numéroté, labels en uppercase, bordure fine jaune.
+Rails Verticaux (audio)
+
+Pistes étroites gris foncé, bords arrondis, remplissage jaune pastel.
+Icônes simples (lune, note de musique, micro) en mono‑couleur, cerclées discrètement.
+Touch-friendly mais optique “instrument” plutôt que “widget”.
+Dock Inférieur
+
+Bandeau anthracite arrondi sur toute la largeur, posé (ombre douce).
+Boutons capsule: libellés uppercase, graisse forte, interlettrage; jaune pastel pour l’état actif.
+Compteurs ronds aux extrémités (page courante / total), bouton Home circulaire au centre.
+CTAs / Rubans
+
+Boutons “ruban” hexagonaux (flancs biseautés) en jaune pastel, texte serif uppercase noir.
+Variante neutre (fond clair) pour “Partager” dans le paywall; même silhouette.
+Paywall / Fin de Lecture
+
+Grand panneau anthracite, coins très arrondis, filet horizontal fin séparateur.
+Titre caps centré + filets décoratifs; liste à puces blanches cassées.
+Cartes de partage 9:16: grande typo de titre, diagonales graphiques, visuel encadré d’un liseré jaune, note “XXX/100” avec “XXX” en jaune.
+Iconographie
+
+Monochrome, traits simples; cohérence entre lune (thème), marque‑page, maison.
+Pas de pictos “mignons”: vocabulaire sobre, éditorial.
+Motion (perception)
+
+Transitions courtes, amorties (cubic-bezier douce), principalement en transform/opacity.
+Ouverture overlay et carrousel en glissement/fade léger; jauges en scaleY fluide.
+Respect du “reduced motion”: animations nettement atténuées.
+Ambiance et Ton
+
+Sérieux, littéraire, légèrement rétro (sepia, grands empattements).
+Cohérence colorimétrique stricte: ivoire/anthracite/jaune pastel + touches olive.
+Priorité absolue à la lisibilité et au calme visuel, avec des accents graphiques rares mais identitaires.

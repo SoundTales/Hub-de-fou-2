@@ -1,9 +1,14 @@
-﻿import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import ReaderShell from './reader/ReaderShell.jsx'
 import { getAudioEngine } from './reader/audioSingleton.js'
 import { createPortal } from 'react-dom'
 import { getTales, getEntitlements } from './api/client.js'
 import HubSplashLogo from './HubSplashLogo.jsx'
+import IABanner from './ui/IABanner.jsx'
+import Quickbar from './ui/Quickbar.jsx'
+import BookmarksPanel from './ui/BookmarksPanel.jsx'
+import Gate from './ui/Gate.jsx'
+import { detectInApp } from './utils/ua.ts'
 
 export default function App() {
   const eyebrowRef = useRef(null)
@@ -134,8 +139,7 @@ export default function App() {
 
   // Detect in-app browsers (FB/IG/Messenger WebView, Android WebView)
   useEffect(() => {
-    const ua = navigator.userAgent || navigator.vendor || window.opera
-    const inApp = /FBAN|FBAV|Instagram|Messenger|Line\//i.test(ua) || /; wv\)/i.test(ua) || /FB_IAB/i.test(ua)
+    const inApp = detectInApp()
     setIsInApp(inApp)
     if (inApp) {
       const firstDone = localStorage.getItem('iab:firstActionDone') === '1'
@@ -143,7 +147,7 @@ export default function App() {
     }
   }, [])
 
-    // Banner route switch + first action compression
+  // Banner route switch + first action compression
   useEffect(() => {
     if (isReaderRoute) {
       setBannerMode('hidden')
@@ -216,11 +220,8 @@ export default function App() {
   }
 
   const enterFullscreen = async () => {
-    // Detect in-app browsers (Facebook, Instagram, etc.)
-    const userAgent = navigator.userAgent || navigator.vendor || window.opera
-    const isInAppBrowser = /FBAN|FBAV|Instagram|Messenger|Line\//i.test(userAgent) ||
-                          /; wv\)/i.test(userAgent) || // Android WebView
-                          /FB_IAB|FBAN|FBAV/i.test(userAgent)
+    // Detect in-app browsers via shared utility
+    const isInAppBrowser = detectInApp()
 
     // Always try the Fullscreen API on user gesture
     const el = document.documentElement
@@ -247,6 +248,14 @@ export default function App() {
       sessionStorage.setItem('hub:fs','0')
     } catch {}
   }
+
+  const toggleFullscreen = useCallback(() => {
+    if (isFullscreen) {
+      exitFullscreen().catch(() => {})
+    } else {
+      enterFullscreen().catch(() => {})
+    }
+  }, [isFullscreen, enterFullscreen, exitFullscreen])
 
   const openInBrowser = () => {
     try {
@@ -413,10 +422,12 @@ export default function App() {
   // Scroll-to-top hint (hub only): shows on upward scroll, hides with quickbar
   useEffect(() => {
     if (isReaderRoute || showGate) { setShowScrollTop(false); return }
-    // If quickbar is off, also hide scrolltop to keep sync
     if (!showFab) { setShowScrollTop(false) }
     let last = Math.max(0, window.scrollY || document.documentElement.scrollTop || 0)
-    let sticky = false, ticking = false
+    let sticky = false
+    let scheduled = false
+    let lastRun = 0
+    const THROTTLE_MS = 80
     const evalState = () => {
       const y = Math.max(0, window.scrollY || document.documentElement.scrollTop || 0)
       const up = y < last - 4
@@ -427,14 +438,28 @@ export default function App() {
       } else {
         if (down || !showFab) { sticky = false; setShowScrollTop(false) }
       }
-      last = y; ticking = false
+      last = y
+      scheduled = false
+      lastRun = performance.now()
     }
-    const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(evalState) } }
-    const onResize = onScroll
-    window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onResize, { passive: true })
+    const onTick = () => {
+      if (scheduled) return
+      const now = performance.now()
+      if (now - lastRun >= THROTTLE_MS) {
+        scheduled = true
+        requestAnimationFrame(evalState)
+      } else {
+        scheduled = true
+        setTimeout(() => requestAnimationFrame(evalState), THROTTLE_MS - (now - lastRun))
+      }
+    }
+    window.addEventListener('scroll', onTick, { passive: true })
+    window.addEventListener('resize', onTick, { passive: true })
     evalState()
-    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onResize) }
+    return () => {
+      window.removeEventListener('scroll', onTick)
+      window.removeEventListener('resize', onTick)
+    }
   }, [isReaderRoute, showGate, showFab])
 
   // Sync favorites across contexts (e.g., when toggled in reader)
@@ -632,111 +657,53 @@ export default function App() {
     <div className="page" data-role="hub">
       {/* Quick actions on the right: Play, Bookmark */}
       {(!isReaderRoute) && (
-        <div
-          className={`quickbar ${(showFab && !showGate) ? 'is-on' : 'is-off'}`}
-          role="region"
-          aria-label="Actions rapides"
-          aria-hidden={!(showFab && !showGate)}
-        >
-          {/* Scroll-to-top at the top of the stack */}
-          <button
-            className={`qbtn ${showScrollTop ? '' : 'is-hidden'}`}
-            type="button"
-            onClick={(e) => { try { window.scrollTo({ top: 0, behavior: 'smooth' }) } catch { window.scrollTo(0,0) } finally { try { e.currentTarget.blur() } catch {} } }}
-            aria-hidden={!showScrollTop}
-            aria-label="Remonter en haut"
-            title="Remonter"
-          >
-            <span className="qicon">↑</span>
-          </button>
-          <button
-            className="qbtn qbtn--primary"
-            type="button"
-            onClick={(e) => {
-              try { getAudioEngine().ensureStarted() } catch {}
-              const primary = tales?.[0]
-              const taleId = primary?.id || 'tale1'
-              let prog = null
-              try { prog = JSON.parse(localStorage.getItem(`reader:progress:${taleId}`) || 'null') } catch {}
-              let targetChapter = primary?.chapters?.[0]?.id || '1'
-              let resume = null
-              if (prog && prog.chapterId) {
-                targetChapter = String(prog.chapterId)
-                resume = { chapterId: String(prog.chapterId), pageIndex: Math.max(0, parseInt(prog.pageIndex || 0, 10) || 0) }
-              }
-              const chapterId = String(targetChapter)
-              const img = primary?.cover || `https://picsum.photos/800/450?random=${chapterId}`
-              const payload = { id: String(chapterId), img, title: primary?.title || 'OSRASE' }
-              try {
-                sessionStorage.setItem('reader:splash', JSON.stringify(payload))
-                if (resume) sessionStorage.setItem('reader:resume', JSON.stringify(resume))
-                else sessionStorage.removeItem('reader:resume')
-              } catch {}
-              window.location.hash = `#/reader/${chapterId}`
-              try { e.currentTarget.blur() } catch {}
-            }}
-            aria-label="Lire/Reprendre"
-            title="Lire/Reprendre"
-          >
-            <img className="qicon qicon--svg" src={`${baseUrl}icons/play.svg`} alt="" aria-hidden="true" />
-          </button>
-          <button
-            className="qbtn qbtn--bookmark"
-            type="button"
-            onClick={(e) => openBookmarksPanel(e, 'quickbar')}
-            aria-label="Signets: chapitres favoris"
-            title="Ouvrir les signets"
-          >
-            <span className="qicon" aria-hidden="true">🔖</span>
-          </button>
-        </div>
+        <Quickbar
+          visible={showFab && !showGate}
+          showScrollTop={showScrollTop}
+          baseUrl={baseUrl}
+          onScrollTop={() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }) } catch { window.scrollTo(0,0) } }}
+          onPlay={(e) => {
+            try { getAudioEngine().ensureStarted() } catch {}
+            const primary = tales?.[0]
+            const taleId = primary?.id || 'tale1'
+            let prog = null
+            try { prog = JSON.parse(localStorage.getItem(`reader:progress:${taleId}`) || 'null') } catch {}
+            let targetChapter = primary?.chapters?.[0]?.id || '1'
+            let resume = null
+            if (prog && prog.chapterId) {
+              targetChapter = String(prog.chapterId)
+              resume = { chapterId: String(prog.chapterId), pageIndex: Math.max(0, parseInt(prog.pageIndex || 0, 10) || 0) }
+            }
+            const chapterId = String(targetChapter)
+            const img = primary?.cover || `https://picsum.photos/800/450?random=${chapterId}`
+            const payload = { id: String(chapterId), img, title: primary?.title || 'OSRASE' }
+            try {
+              sessionStorage.setItem('reader:splash', JSON.stringify(payload))
+              if (resume) sessionStorage.setItem('reader:resume', JSON.stringify(resume))
+              else sessionStorage.removeItem('reader:resume')
+            } catch {}
+            window.location.hash = `#/reader/${chapterId}`
+            try { e?.currentTarget?.blur() } catch {}
+          }}
+          onOpenBookmarks={(e) => openBookmarksPanel(e, 'quickbar')}
+          onToggleFullscreen={toggleFullscreen}
+          fullscreenActive={isFullscreen}
+        />
       )}
-      {!isReaderRoute && !showGate && (
-        <button
-          className="fs-btn"
-          type="button"
-          aria-label={isFullscreen ? 'Quitter le plein \u00E9cran' : 'Activer le plein \u00E9cran'}
-          onClick={isFullscreen ? exitFullscreen : enterFullscreen}
-          title={isFullscreen ? 'Quitter le plein \u00E9cran' : 'Activer le plein \u00E9cran'}
-        >
-          {isFullscreen ? (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M9 4H4v5" />
-              <path d="M15 4h5v5" />
-              <path d="M4 15v5h5" />
-              <path d="M20 15v5h-5" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M4 9V4h5" />
-              <path d="M20 9V4h-5" />
-              <path d="M4 15v5h5" />
-              <path d="M20 15v5h-5" />
-            </svg>
-          )}
-        </button>
-      )}
-      {isInApp && bannerMode === 'full' && (
-        <div className="iab-banner" role="region" aria-label="Ouvrir dans le navigateur">
-          <p className="iab-text">Pour profiter du plein \u00E9cran, lancez la liseuse dans votre navigateur pr\u00E9f\u00E9r\u00E9.</p>
-          <div className="iab-actions">
-            <button className="iab-btn" type="button" onClick={openInBrowser}>Ouvrir dans le navigateur</button>
-            <button className="iab-btn iab-btn--ghost" type="button" onClick={copyLink}>Copier le lien</button>
-          </div>
-        </div>
-      )}
-      {isInApp && bannerMode === 'compact' && (
-        <div className="iab-banner iab-banner--compact" role="region" aria-label="Ouvrir dans le navigateur">
-          <button className="iab-btn" type="button" onClick={openInBrowser}>Ouvrir dans le navigateur</button>
-        </div>
-      )}<header className="hero">
+      <IABanner
+        inApp={isInApp}
+        mode={bannerMode}
+        onOpen={openInBrowser}
+        onCopy={copyLink}
+      />
+      <header className="hero">
         <div className="hero__fade" aria-hidden="true"></div>
 
         <div className="hero__content">
           {/* Eyebrow (top line) */}
           <span className="hero__eyebrow" ref={eyebrowRef}>
             <span className="hero__eyebrow-primary">SOUND TALES</span>
-            <span className="hero__eyebrow-secondary"> PRÉSENTE</span>
+            <span className="hero__eyebrow-secondary">{' PR\u00C9SENTE'}</span>
           </span>
 
           {/* Main title */}
@@ -833,58 +800,34 @@ export default function App() {
         })}
       </main>
       {showBmPanel && (
-        <div className="bm-mask" role="dialog" aria-modal="true" aria-label="Signets" onClick={() => setShowBmPanel(false)}>
-          <div
-            className={`bm-panel ${bmOrigin.side ? `bm--${bmOrigin.side}` : ''} ${bmOrigin.from ? `bm-from-${bmOrigin.from}` : ''}`}
-            role="document"
-            style={(() => {
-              const s = {}
-              if (typeof bmOrigin.left === 'number') s['--bm-left'] = bmOrigin.left + 'px'
-              if (typeof bmOrigin.top === 'number') s['--bm-top'] = bmOrigin.top + 'px'
-              return s
-            })()}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bm-head">
-              <div className="bm-title">Signets</div>
-              <button className="bm-close" aria-label="Fermer" onClick={() => setShowBmPanel(false)}>×</button>
-            </div>
-            <div className="bm-list">
-              {bmItems.length === 0 && (
-                <div className="bm-empty">Aucun chapitre en signet</div>
-              )}
-              {bmItems.map(it => (
-                <button key={it.chapterId} className="bm-item" onClick={() => {
-                  try { getAudioEngine().ensureStarted() } catch {}
-                  const tale = tales?.[0]
-                  const taleId = tale?.id || 'tale1'
-                  const chapterId = String(it.chapterId)
-                  const img = tale?.cover || `https://picsum.photos/800/450?random=${chapterId}`
-                  const payload = { id: String(chapterId), img, title: tale?.title || 'OSRASE' }
-                  try {
-                    sessionStorage.setItem('reader:splash', JSON.stringify(payload))
-                    sessionStorage.setItem('reader:resume', JSON.stringify({ chapterId, pageIndex: it.pageIndex }))
-                  } catch {}
-                  window.location.hash = `#/reader/${chapterId}`
-                }}>
-                  <span className="bm-label">{it.title}</span>
-                  <span className="bm-badge" aria-label={`${it.count} page(s) marquée(s)`}>{it.count}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        <BookmarksPanel
+          origin={bmOrigin}
+          items={bmItems}
+          onClose={() => setShowBmPanel(false)}
+          onSelect={(it) => {
+            try { getAudioEngine().ensureStarted() } catch {}
+            const tale = tales?.[0]
+            const taleId = tale?.id || 'tale1'
+            const chapterId = String(it.chapterId)
+            const img = tale?.cover || `https://picsum.photos/800/450?random=${chapterId}`
+            const payload = { id: String(chapterId), img, title: tale?.title || 'OSRASE' }
+            try {
+              sessionStorage.setItem('reader:splash', JSON.stringify(payload))
+              sessionStorage.setItem('reader:resume', JSON.stringify({ chapterId, pageIndex: it.pageIndex }))
+            } catch {}
+            window.location.hash = `#/reader/${chapterId}`
+          }}
+        />
       )}
       {showGate && createPortal(
-        <div ref={gateRef} className={`gate ${gateState === 'starting' ? 'is-starting' : ''} ${(gateState === 'logo' || gateState === 'finishing') ? 'is-logo' : ''} ${gateState === 'finishing' ? 'is-finishing' : ''}`}>
-          <button className="gate__hit" aria-label="Lancer la liseuse" onClick={startGate}>
-            <div className="gate__center">
-              <span className="gate__msg">Touchez l'écran pour lancer la liseuse</span>
-              <HubSplashLogo baseUrl={baseUrl} />
-            </div>
-          </button>
-        </div>, document.body)
-      }
+        <Gate
+          refEl={gateRef}
+          className={`gate ${gateState === 'starting' ? 'is-starting' : ''} ${(gateState === 'logo' || gateState === 'finishing') ? 'is-logo' : ''} ${gateState === 'finishing' ? 'is-finishing' : ''}`}
+          baseUrl={baseUrl}
+          onStart={startGate}
+        />,
+        document.body
+      )}
 
       {/* Deprecated FAB removed in favor of .quickbar */}
     </div>
