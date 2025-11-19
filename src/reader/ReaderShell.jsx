@@ -1,14 +1,188 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import ReaderSplash from './ReaderSplash.jsx'
 import PageViewport from './PageViewport.jsx'
-import MusicRail from './MusicRail.jsx'
-import VoiceRail from './VoiceRail.jsx'
 import { getAudioEngine } from './audioSingleton.js'
 import { useChapter } from './useChapter.js'
-import { getEntitlements, createCheckoutSession } from '../api/client.js'
+import ChapterCarousel from './ChapterCarousel.jsx'
+import { getEntitlements, createCheckoutSession, getSignedAudioUrl, getTales } from '../api/client.js'
+import {
+  getReaderPrefs,
+  setReaderPrefs,
+  getProgress,
+  setProgress,
+  getBookmarks,
+  setBookmarks,
+  getReadDialogues,
+  setReadDialogues,
+  getFiredTriggers,
+  setFiredTriggers,
+  getSessionFlag,
+  setSessionFlag,
+  getSessionData,
+  setSessionData,
+  removeSessionData
+} from '../utils/storage.ts'
 
 // Guard to avoid double splash in React StrictMode
 let lastSplashGuard = { id: null, ts: 0 }
+const clamp01 = (value) => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0))
+const clampFontDelta = (value) => Math.max(0, Math.min(6, Number.isFinite(value) ? value : 0))
+const PRIMARY_FONT_STACK = "'Playfair Display','EB Garamond',serif"
+const ALT_FONT_STACK = "'EB Garamond','Playfair Display',serif"
+const formatSnippet = (value, limit = 120) => {
+  if (typeof value !== 'string') return ''
+  const clean = value.replace(/\s+/g, ' ').trim()
+  if (!clean) return ''
+  if (clean.length <= limit) return clean
+  return `${clean.slice(0, Math.max(0, limit - 1)).trim()}…`
+}
+const getPagePreview = (page) => {
+  const blocks = page?.blocks
+  if (!Array.isArray(blocks)) return ''
+  const block = blocks.find((entry) => typeof entry?.text === 'string' && entry.text.trim())
+  return formatSnippet(block?.text || '')
+}
+const formatBookmarkDate = (ts) => {
+  if (!ts) return 'Signet sauvegardé'
+  try {
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(ts))
+  } catch {
+    return 'Signet sauvegardé'
+  }
+}
+const VolumeKnob = ({ label, value, onChange, onToggleMute }) => {
+  const knobRef = useRef(null)
+  const dragRef = useRef(null)
+  const moveListenerRef = useRef(null)
+  const upListenerRef = useRef(null)
+  const cancelListenerRef = useRef(null)
+  const percent = Math.round(clamp01(value) * 100)
+  const size = 52
+  const stroke = 4
+  const radius = (size - stroke) / 2
+  const circumference = 2 * Math.PI * radius
+
+  const stopTracking = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      if (moveListenerRef.current) {
+        window.removeEventListener('pointermove', moveListenerRef.current)
+        moveListenerRef.current = null
+      }
+      if (upListenerRef.current) {
+        window.removeEventListener('pointerup', upListenerRef.current)
+        upListenerRef.current = null
+      }
+      if (cancelListenerRef.current) {
+        window.removeEventListener('pointercancel', cancelListenerRef.current)
+        cancelListenerRef.current = null
+      }
+    }
+    dragRef.current = null
+  }, [])
+
+  useEffect(() => stopTracking, [stopTracking])
+
+  const handlePointerDown = useCallback((e) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    if (typeof window === 'undefined') return
+    const state = {
+      pointerId: e.pointerId,
+      startY: e.clientY,
+      startValue: clamp01(value)
+    }
+    dragRef.current = state
+    const handleMove = (evt) => {
+      if (!dragRef.current || dragRef.current.pointerId !== evt.pointerId) return
+      evt.preventDefault()
+      const delta = (dragRef.current.startY - evt.clientY) / 160
+      const nextValue = clamp01(dragRef.current.startValue + delta)
+      onChange(Math.round(nextValue * 100) / 100)
+    }
+    const handleUp = (evt) => {
+      if (!dragRef.current || dragRef.current.pointerId !== evt.pointerId) return
+      stopTracking()
+    }
+    moveListenerRef.current = handleMove
+    upListenerRef.current = handleUp
+    cancelListenerRef.current = handleUp
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+    window.addEventListener('pointercancel', handleUp)
+  }, [onChange, stopTracking, value])
+
+  const dashOffset = circumference * (1 - clamp01(value))
+
+  return (
+    <div className="reader__potard-cell">
+      <span className="reader__potard-name">{label}</span>
+      <div
+        ref={knobRef}
+        className="reader__potard"
+        role="slider"
+        aria-label={`${label}: ${percent}%`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+        aria-valuetext={`${percent} pour cent`}
+        onPointerDown={handlePointerDown}
+      >
+        <svg viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+          <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
+            <circle
+              className="reader__potard-track"
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              strokeWidth={stroke}
+            />
+            <circle
+              className="reader__potard-arc"
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              strokeWidth={stroke}
+              strokeDasharray={circumference}
+              strokeDashoffset={dashOffset}
+            />
+          </g>
+        </svg>
+        <button
+          type="button"
+          className="reader__potard-toggle"
+          onClick={(evt) => { evt.stopPropagation(); onToggleMute() }}
+          onPointerDown={(evt) => evt.stopPropagation()}
+          aria-label={value <= 0 ? `Réactiver ${label}` : `Couper ${label}`}
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M5 9v6h3l4 4V5L8 9H5zm10.5 3a2.5 2.5 0 0 0-1.5-2.291V14.29A2.5 2.5 0 0 0 15.5 12zm1.5 0c0 1.841-1.003 3.413-2.5 4.237v-8.47C16.497 8.586 17 10.158 17 12z"
+            />
+          </svg>
+        </button>
+      </div>
+      <span className="reader__potard-value">{percent}%</span>
+    </div>
+  )
+}
+
+const getInitialTheme = () => {
+  if (typeof window === 'undefined') return 'light'
+  try {
+    const stored = getReaderPrefs()
+    if (stored.theme === 'dark' || stored.theme === 'light') return stored.theme
+  } catch {}
+  try {
+    if (window.matchMedia?.('(prefers-color-scheme: dark)')?.matches) return 'dark'
+  } catch {}
+  return 'light'
+}
 
 function ChapterFavButton({ chapterId, taleId = 'tale1' }) {
   const getKey = () => `hub:fav:${taleId}:${chapterId}`
@@ -36,6 +210,7 @@ function ChapterFavButton({ chapterId, taleId = 'tale1' }) {
   )
 }
 export default function ReaderShell({ chapterId, baseUrl }) {
+  const taleId = 'tale1'
   const [overlayOpen, setOverlayOpen] = useState(false)
   const overlayRef = useRef(null)
   const [splashData, setSplashData] = useState(null)
@@ -43,34 +218,81 @@ export default function ReaderShell({ chapterId, baseUrl }) {
   const [showSplash, setShowSplash] = useState(false)
   const containerRef = useRef(null)
   const [pageIndex, setPageIndex] = useState(0)
-  const [musicVolume, setMusicVolume] = useState(0.8)
+  const [musicVolume, setMusicVolume] = useState(0.5)
+  const [voiceVolume, setVoiceVolume] = useState(0.6)
   const [readDialogIds, setReadDialogIds] = useState(new Set())
+  const [activeDialogueId, setActiveDialogueId] = useState(null)
   const [navDir, setNavDir] = useState('next')
   const engineRef = useRef(null)
   const [entitled, setEntitled] = useState(true)
   const [paywall, setPaywall] = useState(null)
   const firedRef = useRef(new Set())
   const [audioReady, setAudioReady] = useState(false)
-  const [audioPrimed, setAudioPrimed] = useState(() => {
-    try { return sessionStorage.getItem("audioPrimed") === "1" } catch { return false }
-  })
-  const [fontScale, setFontScale] = useState(1)
-  const [textBtn, setTextBtn] = useState('none') // none | small | large
-  const [theme, setTheme] = useState('light')
+  const [audioPrimed, setAudioPrimed] = useState(() => getSessionFlag('audio:primed'))
+  const [fontDelta, setFontDelta] = useState(0)
+  const [fontFamily, setFontFamily] = useState('playfair')
+  const [boldBody, setBoldBody] = useState(false)
+  const [theme, setTheme] = useState(() => getInitialTheme())
   const [bookmarked, setBookmarked] = useState(false)
-  const [bookmarks, setBookmarks] = useState([]) // array of page indexes
-  const [overlayTab, setOverlayTab] = useState('none') // none | chapters | bookmark
-  const [voiceVolume, setVoiceVolume] = useState(1)
+  const [bookmarks, setBookmarks] = useState([])
+  const [overlayTab, setOverlayTab] = useState('none')
   const overlayTapRef = useRef(0)
+  const bookmarkPulseTimer = useRef(null)
+  const autoChainActiveRef = useRef(false)
+  const carouselRef = useRef(null)
+  const musicLastVolume = useRef(0.5)
+  const voiceLastVolume = useRef(0.6)
+  const overlayAnimTimer = useRef(null)
+  const [bookmarkPulse, setBookmarkPulse] = useState(false)
+  const [overlayRendered, setOverlayRendered] = useState(false)
+  const [overlayPhase, setOverlayPhase] = useState('closed')
+  const [carouselNav, setCarouselNav] = useState({ prev: false, next: false })
+  const lastCueRef = useRef({ src: null, pageIndex: -1 })
   const overlayTitleId = useId()
   const overlayDescId = useId()
-  const chaptersPanelId = useId()
-  const bookmarksPanelId = useId()
+
+  // État pour stocker les métadonnées de tous les chapitres
+  const [allChapters, setAllChapters] = useState([])
+
   const closeOverlay = useCallback(() => {
     setOverlayOpen(false)
     setOverlayTab('none')
   }, [])
-  const taleId = 'tale1'
+  const readerStyle = useMemo(() => ({
+    '--reader-font-delta': `${fontDelta}px`,
+    '--reader-font-family': fontFamily === 'garamond' ? ALT_FONT_STACK : PRIMARY_FONT_STACK,
+    '--reader-font-weight': boldBody ? 600 : 400
+  }), [fontDelta, fontFamily, boldBody])
+  const isBoldActive = boldBody
+  const isScaleActive = fontDelta >= 1
+  const isAltFontActive = fontFamily === 'garamond'
+  const textControlsAllActive = isBoldActive && isScaleActive && isAltFontActive
+  const requestOverlay = useCallback((intent = 'toggle') => {
+    if (intent === 'open') {
+      setOverlayOpen(true)
+      setOverlayTab(prev => (prev === 'none' ? 'chapters' : prev))
+      try { engineRef.current?.ensureStarted() } catch {}
+      return
+    }
+    if (intent === 'toggle') {
+      setOverlayOpen(prev => {
+        const next = !prev
+        if (next) {
+          setOverlayTab(tab => (tab === 'none' ? 'chapters' : tab))
+          try { engineRef.current?.ensureStarted() } catch {}
+        } else {
+          setOverlayTab('none')
+        }
+        return next
+      })
+      return
+    }
+    closeOverlay()
+  }, [closeOverlay])
+  const openOverlayTab = useCallback((tab = 'chapters') => {
+    setOverlayTab(tab)
+    requestOverlay('open')
+  }, [requestOverlay])
 
   // Focus trap + Esc for overlay
   useEffect(() => {
@@ -100,20 +322,20 @@ export default function ReaderShell({ chapterId, baseUrl }) {
   // Load persisted preferences once
   useEffect(() => {
     try {
-      const p = JSON.parse(localStorage.getItem('reader:prefs') || '{}')
-      if (typeof p.musicVolume === 'number') setMusicVolume(Math.max(0, Math.min(1, p.musicVolume)))
-      if (typeof p.voiceVolume === 'number') setVoiceVolume(Math.max(0, Math.min(1, p.voiceVolume)))
-      if (typeof p.fontScale === 'number') setFontScale(Math.max(0.8, Math.min(1.6, p.fontScale)))
-      if (p.theme === 'dark' || p.theme === 'light') setTheme(p.theme)
+      const stored = getReaderPrefs()
+      if (typeof stored.musicVolume === 'number') setMusicVolume(clamp01(stored.musicVolume))
+      if (typeof stored.voiceVolume === 'number') setVoiceVolume(clamp01(stored.voiceVolume))
+      if (typeof stored.fontDelta === 'number') setFontDelta(clampFontDelta(stored.fontDelta))
+      if (stored.fontFamily === 'garamond' || stored.fontFamily === 'playfair') setFontFamily(stored.fontFamily)
+      if (typeof stored.boldBody === 'boolean') setBoldBody(stored.boldBody)
+      if (stored.theme === 'dark' || stored.theme === 'light') setTheme(stored.theme)
     } catch {}
   }, [])
 
-  // Persist preferences on change (throttled by microtask is fine)
+  // Persist preferences on change
   useEffect(() => {
-    try {
-      localStorage.setItem('reader:prefs', JSON.stringify({ musicVolume, voiceVolume, fontScale, theme }))
-    } catch {}
-  }, [musicVolume, voiceVolume, fontScale, theme])
+    setReaderPrefs({ musicVolume, voiceVolume, fontDelta, fontFamily, boldBody, theme })
+  }, [musicVolume, voiceVolume, fontDelta, fontFamily, boldBody, theme])
 
   // Scope body mode
   useEffect(() => {
@@ -124,20 +346,18 @@ export default function ReaderShell({ chapterId, baseUrl }) {
   // Splash: once per session and per chapter
   useEffect(() => {
     try {
-      const chapterKey = `reader:splashSeen:${chapterId}`
-      const already = sessionStorage.getItem(chapterKey) === '1'
-      const raw = sessionStorage.getItem('reader:splash')
+      const already = getSessionFlag(`splash:seen:${chapterId}`)
+      const raw = getSessionData('splash:data')
       if (raw && !already) {
-        const data = JSON.parse(raw)
         const now = Date.now()
         const dup = lastSplashGuard.id === String(chapterId) && (now - lastSplashGuard.ts) < 3000
         if (!dup) {
           lastSplashGuard = { id: String(chapterId), ts: now }
-          setSplashData(data)
+          setSplashData(raw)
           setShowSplash(true)
         }
       }
-      try { sessionStorage.removeItem('reader:splash') } catch {}
+      removeSessionData('splash:data')
     } catch {}
   }, [chapterId])
 
@@ -155,22 +375,44 @@ export default function ReaderShell({ chapterId, baseUrl }) {
   useEffect(() => { engineRef.current = getAudioEngine() }, [])
   useEffect(() => { engineRef.current?.setMusicVolume(musicVolume) }, [musicVolume])
   useEffect(() => { engineRef.current?.setVoiceVolume?.(voiceVolume) }, [voiceVolume])
-
-  // Apply font scale and theme on container
   useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    el.style.setProperty('--reader-font-scale', String(fontScale))
-    el.dataset.theme = theme
-  }, [fontScale, theme])
-
-  // Reset modules when overlay opens
+    if (musicVolume > 0) musicLastVolume.current = musicVolume
+  }, [musicVolume])
   useEffect(() => {
-    if (overlayOpen) setOverlayTab('none')
+    if (voiceVolume > 0) voiceLastVolume.current = voiceVolume
+  }, [voiceVolume])
+
+  // Reset modules when overlay closes
+  useEffect(() => {
+    if (!overlayOpen) setOverlayTab('none')
   }, [overlayOpen])
+  useEffect(() => {
+    if (overlayOpen) {
+      if (overlayAnimTimer.current) clearTimeout(overlayAnimTimer.current)
+      setOverlayRendered(true)
+      requestAnimationFrame(() => setOverlayPhase('enter'))
+    } else if (overlayRendered) {
+      setOverlayPhase('exit')
+      overlayAnimTimer.current = setTimeout(() => {
+        setOverlayRendered(false)
+        setOverlayPhase('closed')
+      }, 200)
+    } else {
+      setOverlayPhase('closed')
+    }
+    return () => {
+      if (overlayAnimTimer.current) {
+        clearTimeout(overlayAnimTimer.current)
+        overlayAnimTimer.current = null
+      }
+    }
+  }, [overlayOpen, overlayRendered])
 
   useEffect(() => {
-    const on = () => setAudioPrimed(true)
+    const on = () => {
+      setAudioPrimed(true)
+      setSessionFlag('audio:primed', true)
+    }
     window.addEventListener("audio:primed", on)
     return () => window.removeEventListener("audio:primed", on)
   }, [])
@@ -198,32 +440,405 @@ export default function ReaderShell({ chapterId, baseUrl }) {
   // Double-tap handled in PageViewport only (ignored on dialogues)
 
   // Load chapter via API/Mocks and compute pages
-  const { loading, error, ast, pages } = useChapter({ taleId: 'tale1', chapterId, baseUrl })
+  const { loading, error, ast, pages } = useChapter({ taleId, chapterId, baseUrl })
+  const pageCount = pages?.length || 0
+  const progressRatio = pageCount ? ((pageIndex + 1) / pageCount) : 0
+  const currentPage = useMemo(() => {
+    if (!pages?.length) return null
+    const safeIndex = Math.max(0, Math.min(pageIndex, pages.length - 1))
+    return pages[safeIndex]
+  }, [pages, pageIndex])
+  const pageDialogues = useMemo(() => {
+    if (!currentPage?.blocks?.length) return []
+    return currentPage.blocks.filter((block) => (
+      block?.kind === 'dialogue' || block?.type === 'dialogue'
+    ))
+  }, [currentPage])
+  const hasPages = pageCount > 0
+  const isFirstPage = pageIndex <= 0
+  const isLastPage = hasPages ? pageIndex >= (pageCount - 1) : false
+  const prevPageLabel = hasPages ? Math.max(1, Math.min(pageCount, pageIndex)) : 1
+  const nextPageLabel = hasPages ? Math.min(pageCount, pageIndex + 2) : Math.max(1, pageIndex + 2)
+  const homeLogoSrc = theme === 'light' ? '/logo-clair.svg' : '/logo-sombre.svg'
+  const showCarousel = overlayTab !== 'none'
+  const getPageCueSrc = useCallback((page) => {
+    if (!page) return null
+    const amb = page.ambience || page.audio?.ambience
+    if (!amb) return null
+    if (typeof amb === 'string') return amb
+    if (typeof amb?.cue === 'string') return amb.cue
+    if (typeof amb?.src === 'string') return amb.src
+    return null
+  }, [])
+  const carouselItems = useMemo(() => {
+    if (overlayTab === 'chapters') {
+      return allChapters.map((ch, index) => ({
+        id: `chapter-${ch.id}`,
+        kind: 'chapter',
+        chapterId: ch.id,
+        index,
+        badge: parseInt(ch.id, 10) || index + 1,
+        title: ch.title,
+        img: ch.img,
+        snippet: '', // optionnel: ajouter description si disponible
+        ariaLabel: `Aller au chapitre ${ch.id}: ${ch.title}`
+      }))
+    }
+    if (overlayTab === 'bookmark') {
+      return bookmarks.map((bm, index) => ({
+        id: bm.id || `bookmark-${index}`,
+        kind: 'bookmark',
+        bookmark: bm,
+        chapterId: bm.chapterId,
+        badge: parseInt(bm.chapterId, 10) || index + 1,
+        title: allChapters.find(ch => ch.id === bm.chapterId)?.title || `Chapitre ${bm.chapterId}`,
+        img: allChapters.find(ch => ch.id === bm.chapterId)?.img || '',
+        snippet: formatBookmarkDate(bm.ts),
+        ariaLabel: `Restaurer le signet chapitre ${bm.chapterId}, page ${(bm.pageIndex ?? 0) + 1}`
+      }))
+    }
+    return []
+  }, [overlayTab, allChapters, bookmarks])
+
+  const resolveVoiceSource = useCallback(async (src) => {
+    if (!src) return null
+    try {
+      const signed = await getSignedAudioUrl({ type: 'voice', resource: src, taleId, chapterId })
+      if (signed) return signed
+    } catch {}
+    const cleaned = src.replace(/^\/+/, '')
+    if (/^https?:/i.test(src) || src.startsWith('/')) return src
+    if (baseUrl) {
+      const root = baseUrl.replace(/\/+$/, '')
+      return `${root}/${cleaned}`
+    }
+    return src
+  }, [baseUrl, chapterId, taleId])
+
+  const resolveCueSource = useCallback((src) => {
+    if (!src) return null
+    if (/^https?:/i.test(src) || src.startsWith('/')) return src
+    if (baseUrl) {
+      const root = baseUrl.replace(/\/+$/, '')
+      return `${root}/${src.replace(/^\/+/, '')}`
+    }
+    return src
+  }, [baseUrl])
+
+  const handleDialogueTap = useCallback(async (id, providedBlock = null, options = {}) => {
+    const { auto = false, pageRef = pageIndex } = options || {}
+    if (!id) return
+    const engine = engineRef.current
+    if (!engine) return
+    if (!auto) {
+      autoChainActiveRef.current = false
+    }
+    const voiceState = engine.getVoiceState?.() || null
+    if (voiceState?.metaId === id) {
+      if (voiceState.status === 'playing') {
+        try { engine.pauseVoice?.() } catch {}
+        setActiveDialogueId(id)
+        return
+      }
+      if (voiceState.status === 'paused') {
+        try { await engine.resumeVoice?.() } catch {}
+        return
+      }
+    }
+    setReadDialogIds(prev => new Set([...prev, id]))
+    try { await engine.ensureStarted() } catch {}
+    const dialogue = providedBlock
+      || currentPage?.blocks?.find(block => block.id === id)
+      || ast?.blocks?.find(block => block.id === id)
+    if (!dialogue) return
+    setActiveDialogueId(id)
+    const voiceTrigger = ast?.triggers?.find(t => (
+      t.kind === 'voice' && (
+        t.at === `dialogue:${id}` ||
+        t.id === dialogue.voice ||
+        t.at === dialogue.voice
+      )
+    ))
+    const fallbackRef = dialogue.voice ? `audio/voices/${dialogue.voice}.mp3` : null
+    const targetRef = voiceTrigger?.src || fallbackRef
+    const resolved = await resolveVoiceSource(targetRef)
+    if (!resolved) {
+      setActiveDialogueId(current => current === id ? null : current)
+      return
+    }
+    const dialoguesOnPage = pageDialogues
+    const blockIndex = dialoguesOnPage.findIndex((block) => block.id === id)
+    try {
+      await engine.playVoice(resolved, { metaId: id })
+    } catch (err) {
+      console.warn('[Reader] Lecture voix impossible', err)
+    } finally {
+      setActiveDialogueId(current => current === id ? null : current)
+      if (auto && autoChainActiveRef.current) {
+        const samePage = pageRef === pageIndex
+        if (samePage && blockIndex >= 0) {
+          const nextBlock = dialoguesOnPage[blockIndex + 1]
+          if (nextBlock) {
+            requestAnimationFrame(() => {
+              handleDialogueTap(nextBlock.id, nextBlock, { auto: true, pageRef })
+            })
+            return
+          }
+        }
+        autoChainActiveRef.current = false
+      }
+    }
+  }, [ast, chapterId, currentPage, pageDialogues, pageIndex, resolveVoiceSource])
+
+  const toggleMusicMute = useCallback(() => {
+    setMusicVolume((prev) => {
+      if (prev <= 0.001) {
+        const restored = musicLastVolume.current > 0 ? musicLastVolume.current : 0.5
+        return clamp01(restored)
+      }
+      musicLastVolume.current = prev || musicLastVolume.current || 0.5
+      return 0
+    })
+  }, [])
+
+  const toggleVoiceMute = useCallback(() => {
+    setVoiceVolume((prev) => {
+      if (prev <= 0.001) {
+        const restored = voiceLastVolume.current > 0 ? voiceLastVolume.current : 0.6
+        return clamp01(restored)
+      }
+      voiceLastVolume.current = prev || voiceLastVolume.current || 0.6
+      return 0
+    })
+  }, [])
 
   // --- Bookmarks (per chapter) ---
-  const bmKey = `reader:bookmarks:${taleId}:${chapterId}`
-  const loadBookmarks = () => {
-    try {
-      const raw = localStorage.getItem(bmKey)
-      const arr = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : []
-      const uniq = Array.from(new Set(arr.map(n => Number(n)).filter(n => Number.isInteger(n) && n >= 0)))
-      uniq.sort((a,b) => a - b)
-      return uniq
-    } catch { return [] }
-  }
-  const persistBookmarks = (arr) => {
-    try { localStorage.setItem(bmKey, JSON.stringify(arr)) } catch {}
-  }
-  useEffect(() => { setBookmarks(loadBookmarks()) }, [chapterId])
-  useEffect(() => { setBookmarked(bookmarks.includes(pageIndex)) }, [bookmarks, pageIndex])
-  const toggleBookmarkCurrent = () => {
+  const loadBookmarks = useCallback(() => {
+    return getBookmarks(taleId, chapterId)
+  }, [taleId, chapterId])
+
+  const persistBookmarks = useCallback((items) => {
+    setBookmarks(taleId, chapterId, items)
+  }, [taleId, chapterId])
+
+  useEffect(() => { setBookmarks(loadBookmarks()) }, [loadBookmarks])
+  useEffect(() => {
+    setBookmarked(bookmarks.some(b => b.pageIndex === pageIndex))
+  }, [bookmarks, pageIndex])
+
+  const captureBookmarkSnapshot = useCallback(() => {
+    const audioSnapshot = engineRef.current?.getSnapshot?.() || null
+    return {
+      id: `bm-${Date.now()}-${pageIndex}`,
+      chapterId: String(chapterId),
+      pageIndex,
+      ts: Date.now(),
+      dialogues: Array.from(readDialogIds),
+      theme,
+      fontFamily,
+      fontDelta,
+      boldBody,
+      music: clamp01(musicVolume),
+      voice: clamp01(voiceVolume),
+      triggers: Array.from(firedRef.current || []),
+      audio: audioSnapshot
+    }
+  }, [chapterId, pageIndex, readDialogIds, theme, fontFamily, fontDelta, boldBody, musicVolume, voiceVolume])
+
+  const restoreBookmarkSnapshot = useCallback((bookmark) => {
+    setPageIndex(bookmark.pageIndex)
+    setReadDialogIds(new Set(bookmark.dialogues || []))
+    if (bookmark.fontFamily === 'garamond' || bookmark.fontFamily === 'playfair') setFontFamily(bookmark.fontFamily)
+    if (typeof bookmark.fontDelta === 'number') setFontDelta(clampFontDelta(bookmark.fontDelta))
+    else if (typeof bookmark.fontScale === 'number') setFontDelta(bookmark.fontScale > 1.01 ? 2 : 0)
+    setBoldBody(Boolean(bookmark.boldBody))
+    setMusicVolume(clamp01(bookmark.music ?? musicVolume))
+    setVoiceVolume(clamp01(bookmark.voice ?? voiceVolume))
+    if (bookmark.theme === 'dark' || bookmark.theme === 'light') setTheme(bookmark.theme)
+    firedRef.current = new Set(bookmark.triggers || [])
+    const cueSrc = bookmark.audio?.music?.src
+    if (cueSrc) {
+      try { engineRef.current?.setCue?.(cueSrc, { fadeMs: 180, loop: true }) } catch {}
+    }
+  }, [musicVolume, voiceVolume])
+
+  const toggleBookmarkCurrent = useCallback(() => {
     setBookmarks(prev => {
-      const has = prev.includes(pageIndex)
-      const next = has ? prev.filter(i => i !== pageIndex) : [...prev, pageIndex].sort((a,b)=>a-b)
+      const existing = prev.find(b => b.pageIndex === pageIndex)
+      if (existing) {
+        const next = prev.filter(b => b.pageIndex !== pageIndex)
+        persistBookmarks(next)
+        return next
+      }
+      const snapshot = captureBookmarkSnapshot()
+      const next = [...prev.filter(b => b.pageIndex !== pageIndex), snapshot].sort((a, b) => a.pageIndex - b.pageIndex)
       persistBookmarks(next)
+      setBookmarkPulse(true)
+      if (bookmarkPulseTimer.current) clearTimeout(bookmarkPulseTimer.current)
+      bookmarkPulseTimer.current = setTimeout(() => setBookmarkPulse(false), 420)
       return next
     })
-  }
+  }, [captureBookmarkSnapshot, persistBookmarks, pageIndex])
+  const updateCarouselNav = useCallback(() => {
+    const el = carouselRef.current
+    if (!el) {
+      setCarouselNav({ prev: false, next: false })
+      return
+    }
+    const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth)
+    if (maxScroll <= 2) {
+      setCarouselNav({ prev: false, next: false })
+      return
+    }
+    const threshold = 4
+    const prev = el.scrollLeft > threshold
+    const next = (maxScroll - el.scrollLeft) > threshold
+    setCarouselNav({ prev, next })
+  }, [])
+  const scrollCarousel = useCallback((direction = 'next') => {
+    const el = carouselRef.current
+    if (!el) return
+    const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 900px)').matches
+    const cardsPerView = isDesktop ? 3 : 2
+    const firstCard = el.querySelector('.reader__thumb')
+    const cardWidth = firstCard ? firstCard.getBoundingClientRect().width : (el.clientWidth / Math.max(cardsPerView, 1))
+    let gap = isDesktop ? 20 : 16
+    if (typeof window !== 'undefined') {
+      const style = window.getComputedStyle(el)
+      const rawGap = parseFloat(style.columnGap || style.getPropertyValue('gap') || '0')
+      if (Number.isFinite(rawGap) && rawGap > 0) gap = rawGap
+    }
+    const delta = (cardWidth + gap) * cardsPerView
+    el.scrollBy({ left: direction === 'next' ? delta : -delta, behavior: 'smooth' })
+  }, [])
+  const handleCarouselItemClick = useCallback((item) => {
+    if (!item) return
+    if (item.kind === 'chapter') {
+      const targetChapterId = item.chapterId
+      if (String(targetChapterId) === String(chapterId)) {
+        closeOverlay()
+        return
+      }
+      // Naviguer vers le nouveau chapitre
+      const img = item.img || `https://picsum.photos/800/450?random=${targetChapterId}`
+      const payload = { id: String(targetChapterId), img, title: ast?.title || 'Chapitre' }
+      try {
+        sessionStorage.setItem('reader:splash', JSON.stringify(payload))
+        sessionStorage.removeItem('reader:resume')
+      } catch {}
+      window.location.hash = `#/reader/${targetChapterId}`
+      closeOverlay()
+      return
+    }
+    if (item.kind === 'bookmark' && item.bookmark) {
+      if (String(item.bookmark.chapterId) === String(chapterId)) {
+        // Même chapitre: restaurer snapshot
+        restoreBookmarkSnapshot(item.bookmark)
+        closeOverlay()
+      } else {
+        // Autre chapitre: naviguer + restaurer
+        const targetChapterId = item.bookmark.chapterId
+        const img = item.img || `https://picsum.photos/800/450?random=${targetChapterId}`
+        const payload = { id: String(targetChapterId), img, title: item.title }
+        try {
+          sessionStorage.setItem('reader:splash', JSON.stringify(payload))
+          sessionStorage.setItem('reader:resume', JSON.stringify({ 
+            chapterId: targetChapterId, 
+            pageIndex: item.bookmark.pageIndex || 0 
+          }))
+        } catch {}
+        window.location.hash = `#/reader/${targetChapterId}`
+      }
+    }
+  }, [ast, chapterId, closeOverlay, restoreBookmarkSnapshot])
+
+  // Toggle light/dark mode
+  const handleThemeToggle = useCallback(() => {
+    setTheme(current => (current === 'light' ? 'dark' : 'light'))
+  }, [])
+
+  // Audio prompt test beep
+  const handleTestBeep = useCallback(async () => {
+    try { await engineRef.current?.ensureStarted() } catch {}
+    try { await engineRef.current?.playSfx?.('test-beep') } catch {}
+  }, [])
+
+  // Navigation handlers
+  const handleSwipeNext = useCallback(() => { setNavDir('next'); setPageIndex(i => Math.min(i + 1, pages.length - 1)) }, [pages.length])
+  const handleSwipePrev = useCallback(() => { setNavDir('prev'); setPageIndex(i => Math.max(i - 1, 0)) }, [])
+  const handleDoubleTap = useCallback(() => requestOverlay('toggle'), [requestOverlay])
+
+  // --- Effects ---
+
+  // Close overlay on outside click
+  useEffect(() => {
+    if (!overlayOpen) return
+    const handleClickOutside = (e) => {
+      const root = overlayRef.current
+      if (root && !root.contains(e.target)) {
+        e.preventDefault()
+        closeOverlay()
+      }
+    }
+    document.addEventListener('pointerdown', handleClickOutside)
+    return () => document.removeEventListener('pointerdown', handleClickOutside)
+  }, [closeOverlay, overlayOpen])
+
+  // Charger les métadonnées de tous les chapitres du tale au montage
+  useEffect(() => {
+    let alive = true
+    const loadChapters = async () => {
+      try {
+        const data = await getTales({ baseUrl })
+        if (!alive) return
+        const tale = data?.tales?.find(t => t.id === taleId)
+        if (tale?.chapters) {
+          setAllChapters(tale.chapters.map(ch => ({
+            id: String(ch.id),
+            title: ch.title || `Chapitre ${ch.id}`,
+            img: ch.cover || tale.cover || `https://picsum.photos/800/450?random=${ch.id}`
+          })))
+        }
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.warn('[ReaderShell] Échec chargement chapitres:', err)
+        }
+      }
+    }
+    loadChapters()
+    return () => { alive = false }
+  }, [taleId, baseUrl])
+
+  // Reset last cue on chapter change
+  useEffect(() => {
+    lastCueRef.current = { src: null, pageIndex: -1 }
+  }, [chapterId])
+  useEffect(() => {
+    const engine = engineRef.current
+    if (!engine || !pages?.length) return
+    const page = currentPage
+    const cueRaw = getPageCueSrc(page)
+    if (!cueRaw) {
+      lastCueRef.current = { src: null, pageIndex }
+      return
+    }
+    const resolved = resolveCueSource(cueRaw)
+    if (!resolved) return
+    const last = lastCueRef.current
+    const same = last.src === resolved
+    if (!same) {
+      const adjacent = last.pageIndex >= 0 ? Math.abs(pageIndex - last.pageIndex) === 1 : false
+      const fadeMs = !last.src ? 200 : (adjacent ? 0 : 200)
+      engine.ensureStarted?.()
+      engine.setCue?.(resolved, { fadeMs, loop: true })
+      lastCueRef.current = { src: resolved, pageIndex }
+    }
+    const nextRaw = getPageCueSrc(pages[pageIndex + 1])
+    if (nextRaw) {
+      const resolvedNext = resolveCueSource(nextRaw)
+      if (resolvedNext) engine.prefetch?.(resolvedNext)
+    }
+  }, [pageIndex, pages, currentPage, getPageCueSrc, resolveCueSource])
   const handleOverlayPointerDown = useCallback((e) => {
     if (typeof e.button === 'number' && e.button !== 0) return
     const surface = e.currentTarget.querySelector('.reader__overlay-surface')
@@ -244,51 +859,118 @@ export default function ReaderShell({ chapterId, baseUrl }) {
     }
     overlayTapRef.current = allowDoubleTap ? now : 0
   }, [closeOverlay])
-  const clearAllBookmarks = () => {
-    setBookmarks(() => { persistBookmarks([]); return [] })
-  }
+  const clearAllBookmarks = useCallback(() => {
+    persistBookmarks([])
+    setBookmarks([])
+  }, [persistBookmarks])
+
+  useEffect(() => {
+    return () => {
+      if (bookmarkPulseTimer.current) clearTimeout(bookmarkPulseTimer.current)
+    }
+  }, [])
+  useEffect(() => {
+    if (!showCarousel) {
+      setCarouselNav({ prev: false, next: false })
+      return
+    }
+    const el = carouselRef.current
+    if (!el) return
+    const handleScroll = () => updateCarouselNav()
+    const handleResize = () => updateCarouselNav()
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize)
+    }
+    requestAnimationFrame(() => {
+      try { el.scrollTo({ left: 0, behavior: 'auto' }) } catch { el.scrollLeft = 0 }
+      updateCarouselNav()
+    })
+    el.addEventListener('scroll', handleScroll, { passive: true })
+    return () => {
+      el.removeEventListener('scroll', handleScroll)
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleResize)
+      }
+    }
+  }, [showCarousel, overlayTab, carouselItems.length, updateCarouselNav])
 
   // Resume to requested page if provided by hub
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem('reader:resume')
-      if (!raw) return
-      const r = JSON.parse(raw)
+      const r = getSessionData('resume:data')
+      if (!r) return
       if (String(r?.chapterId || '') !== String(chapterId)) return
       const idx = Math.max(0, parseInt(r?.pageIndex || 0, 10) || 0)
       setPageIndex(idx)
-      // one-shot
-      sessionStorage.removeItem('reader:resume')
+      removeSessionData('resume:data')
     } catch {}
   }, [chapterId])
 
   // Persist precise reading progress (chapter + page)
   useEffect(() => {
     try {
-      const payload = { chapterId: String(chapterId), pageIndex: Math.max(0, pageIndex), ts: Date.now() }
-      localStorage.setItem(`reader:progress:${taleId}`, JSON.stringify(payload))
+      setProgress(taleId, { chapterId: String(chapterId), pageIndex: Math.max(0, pageIndex), ts: Date.now() })
     } catch {}
   }, [taleId, chapterId, pageIndex])
-
-  // Autoplay best-effort: dès que l'AST est chargé, tenter de lancer la première boucle
   useEffect(() => {
-    if (!ast?.triggers) return
+    autoChainActiveRef.current = false
+  }, [pageIndex, chapterId])
+
+  const handleSpaceKey = useCallback(() => {
     const engine = engineRef.current
     if (!engine) return
-    const cues = ast.triggers.filter(t => t.kind === 'cue' && t.src)
-    if (!cues.length) return
-    let chosen = cues[0]
-    let best = 1
-    for (const t of cues) {
-      const at = String(t.at || '')
-      if (/^progress:/i.test(at)) {
-        const p = parseFloat(at.split(':')[1] || '0')
-        if (!isNaN(p) && p < best) { best = p; chosen = t }
+    const voiceState = engine.getVoiceState?.() || null
+    if (voiceState?.status === 'playing') {
+      try { engine.pauseVoice?.() } catch {}
+      return
+    }
+    if (voiceState?.status === 'paused') {
+      autoChainActiveRef.current = true
+      Promise.resolve(engine.resumeVoice?.()).catch(() => {})
+      setActiveDialogueId(voiceState.metaId || null)
+      return
+    }
+    const dialogues = pageDialogues
+    if (!dialogues.length) return
+    const unreadIndex = dialogues.findIndex(block => !readDialogIds.has(block.id))
+    const nextBlock = dialogues[Math.max(0, unreadIndex)]
+    if (!nextBlock) return
+    autoChainActiveRef.current = true
+    handleDialogueTap(nextBlock.id, nextBlock, { auto: true, pageRef: pageIndex })
+  }, [handleDialogueTap, pageDialogues, pageIndex, readDialogIds])
+
+  useEffect(() => {
+    const node = containerRef.current
+    if (!node) return
+    const onWheel = (e) => {
+      if (Math.abs(e.deltaY) < Math.abs(e.deltaX)) return
+      if (e.deltaY < -6) {
+        e.preventDefault()
+        requestOverlay('open')
+      } else if (e.deltaY > 6) {
+        e.preventDefault()
+        requestOverlay('close')
       }
     }
-    engine.ensureStarted()?.finally(() => engine.setCue(chosen.src, { fadeMs: 220, loop: chosen.loop !== false }))
-  }, [ast])
+    node.addEventListener('wheel', onWheel, { passive: false })
+    return () => node.removeEventListener('wheel', onWheel)
+  }, [requestOverlay])
 
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.code !== 'Space' && e.key !== ' ') return
+      const target = e.target
+      if (!target) return
+      const tag = target.tagName
+      if ((tag && /^(INPUT|TEXTAREA|SELECT)$/i.test(tag)) || target.isContentEditable) return
+      e.preventDefault()
+      handleSpaceKey()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [handleSpaceKey])
+
+  // Autoplay best-effort: dès que l'AST est chargé, tenter de lancer la première boucle
   // Check entitlements (stub + mocks)
   useEffect(() => {
     let alive = true
@@ -304,105 +986,6 @@ export default function ReaderShell({ chapterId, baseUrl }) {
     check()
     return () => { alive = false }
   }, [chapterId])
-
-  const handleDialogueTap = async (id) => {
-    console.log('=== DIALOGUE TAP HANDLER ===')
-    console.log('Dialogue ID cliqué:', id)
-    console.log('AST actuel:', ast)
-    console.log('Triggers disponibles:', ast?.triggers)
-    console.log('Engine ref:', engineRef.current)
-    
-    setReadDialogIds(prev => new Set(prev).add(id))
-    
-    // S'assurer que le contexte audio est démarré
-    try {
-      if (!engineRef.current) {
-        console.error('Engine audio non initialisé!')
-        return
-      }
-      
-      await engineRef.current.ensureStarted()
-      console.log('Contexte audio démarré, état:', engineRef.current.state)
-    } catch (err) {
-      console.error('Erreur démarrage audio:', err)
-      return
-    }
-    
-    // Trouver le bloc de dialogue pour obtenir les infos de voix
-    const dialogue = ast?.blocks?.find(b => b.id === id)
-    if (!dialogue) {
-      console.warn('Dialogue non trouvé dans AST:', id)
-      return
-    }
-    
-    console.log('Dialogue trouvé:', dialogue)
-    
-    // Chercher le trigger de voix correspondant
-    let voiceTrigger = ast?.triggers?.find(t => 
-      t.kind === 'voice' && (
-        t.at === `dialogue:${id}` || 
-        t.id === dialogue.voice ||
-        t.at === dialogue.voice
-      )
-    )
-    
-    console.log('Trigger de voix trouvé:', voiceTrigger)
-    
-    // Si aucun trigger trouvé, essayer de construire le chemin audio à partir de la propriété voice
-    if (!voiceTrigger && dialogue.voice) {
-      const audioPath = `${baseUrl}audio/voices/${dialogue.voice}.mp3`
-      console.log('Construction du chemin audio:', audioPath)
-      try {
-        await engineRef.current.playVoice(audioPath)
-        console.log('Audio joué depuis chemin construit')
-      } catch (err) {
-        console.warn('Échec lecture audio construit, son de test:', err)
-        // Son de test de secours
-        try {
-          await engineRef.current.playVoice('test-beep')
-          console.log('Son de test joué')
-        } catch (err2) {
-          console.error('Même le son de test a échoué:', err2)
-        }
-      }
-      return
-    }
-    
-    // Jouer à partir du trigger
-    if (voiceTrigger?.src) {
-      console.log('Lecture depuis trigger:', voiceTrigger.src)
-      try {
-        await engineRef.current.playVoice(voiceTrigger.src)
-        console.log('Audio joué depuis trigger')
-      } catch (err) {
-        console.warn('Échec lecture trigger, son de test:', err)
-        try {
-          await engineRef.current.playVoice('test-beep')
-          console.log('Son de test joué en secours')
-        } catch (err2) {
-          console.error('Son de test échoué:', err2)
-        }
-      }
-    } else {
-      // Secours final : son de test
-      console.log('Aucune voix trouvée, génération d\'un son de test')
-      try {
-        await engineRef.current.playVoice('test-beep')
-        console.log('Son de test final joué')
-      } catch (err) {
-        console.error('Impossible de jouer même un son de test:', err)
-      }
-    }
-  }
-
-  // Minimal paywall (client-side gate only; real security is server-side)
-  useEffect(() => {
-    if (!loading && ast) {
-      // If chapter is paywalled and user not entitled (mock rule: chapterId !== '1')
-      const isPaywalled = String(chapterId) !== '1'
-      setPaywall(isPaywalled && !entitled)
-    }
-  }, [loading, ast, entitled, chapterId])
 
   // Evaluate triggers on page change (forward only)
   useEffect(() => {
@@ -488,14 +1071,18 @@ export default function ReaderShell({ chapterId, baseUrl }) {
   }, [ast, pages, pageIndex])
 
   return (
-    <div className="reader" ref={containerRef}>
+    <div className="reader" ref={containerRef} data-theme={theme} style={readerStyle}>
       {showSplash && splashData && (
         <ReaderSplash
           id={splashData.id || String(chapterId)}
           title={splashData.title || `Chapitre ${chapterId}`}
           img={splashData.img}
           ready={preloadDone}
-          onFinished={() => { try { sessionStorage.setItem(`reader:splashSeen:${chapterId}`,'1') } catch {}; setShowSplash(false) }}
+          theme={theme}
+          onFinished={() => { 
+            setSessionFlag(`splash:seen:${chapterId}`, true)
+            setShowSplash(false) 
+          }}
         />
       )}
       {!showSplash && !paywall && (
@@ -509,7 +1096,67 @@ export default function ReaderShell({ chapterId, baseUrl }) {
               <div className="reader__book">{(ast?.title || '\u00C0 JAMAIS, POUR TOUJOURS')}</div>
               <div className="reader__page">{Math.max(1, Math.min(pageIndex + 1, pages?.length || 1))}/{pages?.length || 1}</div>
             </div>
-            <div className="reader__header-right" />
+            <div className="reader__header-right">
+              <div className="reader__text-stack">
+                <div className="reader__text-row">
+                  <button
+                    type="button"
+                    className={`reader__bookmark ${bookmarked ? 'is-on' : ''} ${bookmarkPulse ? 'has-pulse' : ''}`}
+                    aria-pressed={bookmarked}
+                    aria-label={bookmarked ? 'Supprimer le signet courant' : 'Ajouter cette page aux signets'}
+                    onClick={toggleBookmarkCurrent}
+                  >
+                    <svg className="reader__bookmark-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path fill="currentColor" d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1z" />
+                    </svg>
+                  </button>
+                  <div className={`reader__text-pill ${textControlsAllActive ? 'is-boost' : ''}`}>
+                    <button
+                      type="button"
+                      className={`reader__segment ${isBoldActive ? 'is-active' : ''}`}
+                      aria-pressed={isBoldActive}
+                      onClick={() => setBoldBody(v => !v)}
+                    >B</button>
+                    <div className="reader__segment-sep" aria-hidden="true" />
+                    <button
+                      type="button"
+                      className={`reader__segment ${isScaleActive ? 'is-active' : ''}`}
+                      aria-pressed={isScaleActive}
+                      onClick={() => setFontDelta(isScaleActive ? 0 : 2)}
+                    >A+</button>
+                    <div className="reader__segment-sep" aria-hidden="true" />
+                    <button
+                      type="button"
+                      className={`reader__segment ${isAltFontActive ? 'is-active' : ''}`}
+                      aria-pressed={isAltFontActive}
+                      onClick={() => setFontFamily(f => (f === 'garamond' ? 'playfair' : 'garamond'))}
+                    >Aa</button>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="reader__theme-toggle"
+                  aria-pressed={theme === 'dark'}
+                  aria-label={theme === 'light' ? 'Activer le mode nuit' : 'Activer le mode jour'}
+                  onClick={() => setTheme(current => (current === 'light' ? 'dark' : 'light'))}
+                >
+                  <img
+                    src={theme === 'light' ? '/mode-jour.svg' : '/mode-nuit.svg'}
+                    alt=""
+                    aria-hidden="true"
+                    draggable="false"
+                  />
+                </button>
+              </div>
+              <button
+                type="button"
+                className="reader__overlay-btn"
+                onClick={() => openOverlayTab('chapters')}
+                aria-haspopup="dialog"
+              >
+                Chapitres
+              </button>
+            </div>
           </header>
           <main className="reader__stage">
       {!audioPrimed && (
@@ -532,25 +1179,43 @@ export default function ReaderShell({ chapterId, baseUrl }) {
           >Tester un bip</button>
         </div>
       )}
-            {pages?.length > 0 && (
+            {pages?.length > 0 && currentPage && (
               <PageViewport
-              key={pageIndex}
-              page={pages[Math.max(0, Math.min(pageIndex, pages.length - 1))]}
-              dir={navDir}
-              readDialogIds={readDialogIds}
-              onDialogueTap={handleDialogueTap}
-              onSwipeNext={() => { setNavDir('next'); setPageIndex(i => Math.min(i + 1, pages.length - 1)) }}
-              onSwipePrev={() => { setNavDir('prev'); setPageIndex(i => Math.max(i - 1, 0)) }}
-              onDoubleTap={() => { setOverlayOpen(v => !v); engineRef.current?.ensureStarted() }}
-              overlayOpen={overlayOpen}
-              onPrimeAudio={() => { engineRef.current?.ensureStarted() }}
+                key={pageIndex}
+                page={currentPage}
+                dir={navDir}
+                readDialogIds={readDialogIds}
+                activeDialogueId={activeDialogueId}
+                chapterTitle={ast?.title || ''}
+                pageIndex={pageIndex}
+                pageCount={pageCount}
+                onDialogueTap={handleDialogueTap}
+                onSwipeNext={() => { setNavDir('next'); setPageIndex(i => Math.min(i + 1, pages.length - 1)) }}
+                onSwipePrev={() => { setNavDir('prev'); setPageIndex(i => Math.max(i - 1, 0)) }}
+                onDoubleTap={() => requestOverlay('toggle')}
+                overlayOpen={overlayOpen}
+                onPrimeAudio={() => { engineRef.current?.ensureStarted() }}
+                onOverlayGesture={requestOverlay}
               />
+            )}
+            {pageCount > 0 && overlayOpen && (
+              <div
+                className="reader__progress"
+                role="progressbar"
+                aria-label="Progression de lecture"
+                aria-valuemin={0}
+                aria-valuemax={pageCount}
+                aria-valuenow={Math.min(pageCount, pageIndex + 1)}
+              >
+                <span className="reader__progress-fill" style={{ width: `${Math.max(0, Math.min(100, progressRatio * 100))}%` }} />
+              </div>
             )}
             {/* rails et boutons déplacés dans l'overlay */}
           </main>
-          {overlayOpen && (
+          {overlayRendered && (
             <div
               className="reader__overlay"
+              data-phase={overlayPhase}
               ref={overlayRef}
               role="dialog"
               aria-modal="true"
@@ -559,38 +1224,8 @@ export default function ReaderShell({ chapterId, baseUrl }) {
               onPointerDown={handleOverlayPointerDown}
             >
               <div className="reader__overlay-surface">
-                <header className="reader__overlay-topbar">
+                <header className="reader__overlay-topbar reader__ui-row" data-row="0">
                   <span id={overlayTitleId} className="reader__overlay-heading">R\u00E9glages de lecture</span>
-                  <div className="reader__overlay-actions">
-                    <button
-                      type="button"
-                      className={`reader__icon ${bookmarked ? 'is-on' : ''}`}
-                      aria-pressed={bookmarked}
-                      onClick={toggleBookmarkCurrent}
-                      title={bookmarked ? "Retirer le marque-page" : "Ajouter un marque-page"}
-                      aria-label={bookmarked ? "Retirer le marque-page courant" : "Ajouter un marque-page sur cette page"}
-                    ><svg className="hero__bookmark-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1z" /></svg></button>
-                    <span className="reader__sep" aria-hidden="true">|</span>
-                    <div className="reader__overlay-tools" role="group" aria-label="Taille du texte">
-                      <button
-                        type="button"
-                        className={`reader__pill ${textBtn==='small' ? 'is-active' : ''}`}
-                        onClick={() => {
-                          if (textBtn==='small') { setTextBtn('none'); setFontScale(1) }
-                          else { setTextBtn('small'); setFontScale(0.9) }
-                        }}
-                      >B</button>
-                      <button
-                        type="button"
-                        className={`reader__pill ${textBtn==='large' ? 'is-active' : ''}`}
-                        onClick={() => {
-                          if (textBtn==='large') { setTextBtn('none'); setFontScale(1) }
-                          else { setTextBtn('large'); setFontScale(1.2) }
-                        }}
-                      >A+</button>
-                      <button type="button" className="reader__pill" onClick={() => { setTextBtn('none'); setFontScale(1) }}>Aa</button>
-                    </div>
-                  </div>
                   <button
                     type="button"
                     className="reader__overlay-close"
@@ -601,109 +1236,131 @@ export default function ReaderShell({ chapterId, baseUrl }) {
                   </button>
                 </header>
                 <p id={overlayDescId} className="sr-only">Double tapez ou appuyez sur \u00C9chap pour fermer la palette.</p>
-                <div className="reader__overlay-rails">
-                  <button
-                    type="button"
-                    className="reader__theme"
-                    onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-                    title="Mode nuit / jour"
-                    aria-label="Mode nuit / jour"
-                    aria-pressed={theme === 'dark'}
-                  >
-                    {theme === 'light' ? (
-                      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M6.76 4.84l-1.8-1.79L3.17 4.84l1.79 1.79 1.8-1.79zM1 13h4v-2H1v2zm10 10h2v-4h-2v4zM4.22 19.78l1.79-1.79-1.8-1.79-1.79 1.8 1.8 1.78zM20 11V9h-4v2h4zm-2.93-6.16l-1.79 1.8 1.79 1.79 1.8-1.79-1.8-1.8zM13 1h-2v4h2V1zm6.78 18.78l-1.8-1.79-1.79 1.79 1.79 1.8 1.8-1.8zM12 6a6 6 0 100 12 6 6 0 000-12z"/></svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M21.64 13a9 9 0 11-10.63-10.6 1 1 0 01.9 1.47A7 7 0 1019.5 12.7a1 1 0 011.47-.9 9.05 9.05 0 01.67 1.2z"/></svg>
-                    )}
-                  </button>
-                  <MusicRail value={musicVolume} onChange={setMusicVolume} />
-                  <VoiceRail value={voiceVolume} onChange={setVoiceVolume} baseUrl={baseUrl} />
-                </div>
-              {overlayTab !== 'none' && (
-                <div className="reader__carousel" role="list" aria-label="Navigation rapide">
-                  {Array.from({ length: pages?.length || 6 }, (_, i) => (
-                    <div key={i} className="reader__thumb" role="listitem">
-                      <div className="reader__thumb-img" aria-hidden="true" />
-                      <div className="reader__thumb-meta">
-                        <span className="reader__thumb-title">R\u00E9signation</span>
-                        <span className="reader__thumb-badge" aria-hidden="true">{i + 1}</span>
-                      </div>
-                    </div>
-                  ))}
+              {!showCarousel && (
+                <div className="reader__potards reader__ui-row" data-row="1" role="group" aria-label="Réglages audio">
+                  <VolumeKnob
+                    label="Ambiance"
+                    value={musicVolume}
+                    onChange={(v) => setMusicVolume(clamp01(v))}
+                    onToggleMute={toggleMusicMute}
+                  />
+                  <VolumeKnob
+                    label="Dialogues"
+                    value={voiceVolume}
+                    onChange={(v) => setVoiceVolume(clamp01(v))}
+                    onToggleMute={toggleVoiceMute}
+                  />
                 </div>
               )}
-              <div className="reader__dock" role="group" aria-label="Contr\u00F4les secondaires">
-                <span className="reader__dock-ind" aria-label="Page courante">{Math.max(1, pageIndex + 1)}</span>
+              {showCarousel && (
+                <div className={`reader__carousel-shell reader__ui-row ${carouselNav.prev ? 'has-prev' : ''} ${carouselNav.next ? 'has-next' : ''}`} data-row="2">
+                  <button
+                    type="button"
+                    className="reader__carousel-nav reader__carousel-nav--prev"
+                    onClick={() => scrollCarousel('prev')}
+                    disabled={!carouselNav.prev}
+                    aria-hidden={!carouselNav.prev}
+                    aria-label="Faire défiler vers la gauche"
+                  >
+                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                  </button>
+                  <ChapterCarousel
+                    items={carouselItems}
+                    theme={theme}
+                    onSelect={handleCarouselItemClick}
+                    carouselRef={carouselRef}
+                    onUpdateNav={updateCarouselNav}
+                    visible={showCarousel}
+                  />
+                  <button
+                    type="button"
+                    className="reader__carousel-nav reader__carousel-nav--next"
+                    onClick={() => scrollCarousel('next')}
+                    disabled={!carouselNav.next}
+                    aria-hidden={!carouselNav.next}
+                    aria-label="Faire défiler vers la droite"
+                  >
+                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="m10 6 1.41 1.41L8.83 10H18v2H8.83l2.58 2.59L10 16l-6-6z"/></svg>
+                  </button>
+                </div>
+              )}
+              <div className="reader__dock reader__ui-row" data-row="3" role="group" aria-label="Contr\u00F4les secondaires">
                 <button
                   type="button"
-                  className={`reader__dock-btn ${overlayTab==='bookmark'?'is-active':''}`}
-                  onClick={() => setOverlayTab(t => t==='bookmark'?'none':'bookmark')}
-                  aria-pressed={overlayTab === 'bookmark'}
-                >MARQUE-PAGE</button>
-                <button
-                  type="button"
-                  className="reader__dock-home"
-                  onClick={() => { window.location.hash = '#/' }}
-                  aria-label="Retour au hub"
+                  className={`reader__dock-circle ${isFirstPage ? 'is-disabled' : ''}`}
+                  aria-label={isFirstPage ? 'Premi\u00E8re page' : `Page pr\u00E9c\u00E9dente (${Math.max(1, pageIndex)})`}
+                  aria-disabled={isFirstPage}
+                  onClick={() => {
+                    if (isFirstPage) return
+                    setNavDir('prev')
+                    setPageIndex(i => Math.max(0, i - 1))
+                  }}
                 >
-                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3l9 8h-3v10h-5V15H11v6H6V11H3l9-8z"/></svg>
+                  <span>{prevPageLabel}</span>
                 </button>
                 <button
                   type="button"
-                  className={`reader__dock-btn ${overlayTab==='chapters'?'is-active':''}`}
+                  className={`reader__dock-pill ${overlayTab==='bookmark' ? 'is-active' : ''}`}
+                  onClick={() => setOverlayTab(t => t==='bookmark'?'none':'bookmark')}
+                  aria-pressed={overlayTab === 'bookmark'}
+                >
+                  MARQUE-PAGE
+                </button>
+                <button
+                  type="button"
+                  className="reader__dock-pill reader__dock-pill--icon"
+                  onClick={() => { window.location.hash = '#/' }}
+                  aria-label="Retour au hub"
+                >
+                  <img src={homeLogoSrc} alt="" aria-hidden="true" draggable="false" />
+                </button>
+                <button
+                  type="button"
+                  className={`reader__dock-pill ${overlayTab==='chapters' ? 'is-active' : ''}`}
                   onClick={() => setOverlayTab(t => t==='chapters'?'none':'chapters')}
                   aria-pressed={overlayTab === 'chapters'}
-                >CHAPITRAGE</button>
-                <span className="reader__dock-ind" aria-label="Nombre de pages">{Math.max(1, (pages?.length || 1))}</span>
+                >
+                  CHAPITRAGE
+                </button>
+                <button
+                  type="button"
+                  className={`reader__dock-circle reader__dock-circle--next ${isLastPage ? 'is-star' : ''} ${(!isLastPage && !hasPages ? 'is-disabled' : '')}`}
+                  aria-label={isLastPage ? 'Noter ce chapitre' : `Page suivante (${Math.min(pageCount || 1, pageIndex + 2)})`}
+                  aria-disabled={!hasPages}
+                  onClick={() => {
+                    if (!hasPages) return
+                    if (isLastPage) {
+                      window.location.hash = '#/rating'
+                      return
+                    }
+                    setNavDir('next')
+                    setPageIndex(i => Math.min((pageCount || 1) - 1, i + 1))
+                  }}
+                >
+                  {isLastPage ? (
+                    <svg className="reader__dock-star" viewBox="0 0 24 24" aria-hidden="true">
+                      <path fill="currentColor" d="m12 2 2.83 6.57 7.17.61-5.45 4.79 1.63 7.03L12 17.74 5.82 20.99l1.63-7.02L2 9.18l7.17-.61z" />
+                    </svg>
+                  ) : (
+                    <span>{nextPageLabel}</span>
+                  )}
+                </button>
               </div>
-              {overlayTab === 'chapters' && (
-                <div className="reader__panel" role="region" aria-labelledby={chaptersPanelId}>
-                  <div id={chaptersPanelId} className="reader__panel-title">Chapitrage</div>
-                  <div className="reader__panel-grid">
-                    {Array.from({ length: pages?.length || 1 }, (_, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        className={`reader__cell ${i===pageIndex?'is-current':''}`}
-                        onClick={() => { setPageIndex(i); closeOverlay() }}
-                        aria-label={`Aller \u00E0 la page ${i+1}`}
-                      >{i+1}</button>
-                    ))}
-                  </div>
-                </div>
-              )}
               {overlayTab === 'bookmark' && (
-                <div className="reader__panel" role="region" aria-labelledby={bookmarksPanelId}>
-                  <div id={bookmarksPanelId} className="reader__panel-title">Marque-pages</div>
-                  <div className="reader__panel-grid">
-                    {bookmarks.length === 0 && (
-                      <div className="reader__cell" style={{ opacity: 0.7, pointerEvents: 'none' }}>Aucun</div>
-                    )}
-                    {bookmarks.map((i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        className={`reader__cell ${i===pageIndex?'is-current':''}`}
-                        onClick={() => { setPageIndex(i); closeOverlay() }}
-                        aria-label={`Aller \u00E0 la page ${i+1}`}
-                      >{i+1}</button>
-                    ))}
-                  </div>
-                  <div className="reader__panel-actions">
+                <div className="reader__panel-actions reader__ui-row" data-row="4">
+                  <button
+                    type="button"
+                    className={`reader__pill ${bookmarked ? 'is-active' : ''}`}
+                    onClick={toggleBookmarkCurrent}
+                    aria-label={bookmarked ? 'Retirer le marque-page courant' : 'Ajouter un marque-page sur cette page'}
+                  >{bookmarked ? 'Retirer le courant' : 'Ajouter la page courante'}</button>
+                  {bookmarks.length > 0 && (
                     <button
                       type="button"
-                      className={`reader__pill ${bookmarked ? 'is-active' : ''}`}
-                      onClick={toggleBookmarkCurrent}
-                      aria-label={bookmarked ? 'Retirer le marque-page courant' : 'Ajouter un marque-page sur cette page'}
-                    >{bookmarked ? 'Retirer le courant' : 'Ajouter la page courante'}</button>
-                    {bookmarks.length > 0 && (
-                      <button
-                        type="button"
-                        className="reader__pill"
-                        onClick={() => { if (confirm('Supprimer tous les marque-pages de ce chapitre ?')) clearAllBookmarks() }}
-                      >Tout effacer</button>
-                    )}
-                  </div>
+                      className="reader__pill"
+                      onClick={() => { if (confirm('Supprimer tous les marque-pages de ce chapitre ?')) clearAllBookmarks() }}
+                    >Tout effacer</button>
+                  )}
                 </div>
               )}
             </div>
@@ -735,6 +1392,10 @@ export default function ReaderShell({ chapterId, baseUrl }) {
     </div>
   )
 }
+
+
+
+
 
 
 

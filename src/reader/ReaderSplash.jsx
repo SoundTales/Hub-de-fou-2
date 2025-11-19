@@ -1,13 +1,17 @@
-﻿import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-export default function ReaderSplash({ id, title, img, ready, onFinished }) {
+export default function ReaderSplash({ id, title, img, ready, onFinished, theme = 'light' }) {
   const [phase, setPhase] = useState('in') // in -> exit
+  const [canDismiss, setCanDismiss] = useState(false)
   const rootRef = useRef(null)
   const startRef = useRef(Date.now())
+  const palette = theme === 'dark'
+    ? { bg: '#424242', ink: '#FEFFF4' }
+    : { bg: '#FEFFF4', ink: '#424242' }
 
   useEffect(() => {
-    const minHold = 2200
-    const hardCut = 5000
+    const minHold = 3000
+    const hardCut = 6000
     const hardTimer = setTimeout(() => setPhase('exit'), hardCut)
     let softTimer
     if (ready) {
@@ -16,6 +20,14 @@ export default function ReaderSplash({ id, title, img, ready, onFinished }) {
       softTimer = setTimeout(() => setPhase('exit'), remain)
     }
     return () => { clearTimeout(hardTimer); if (softTimer) clearTimeout(softTimer) }
+  }, [ready])
+  useEffect(() => {
+    if (!ready) {
+      setCanDismiss(false)
+      return
+    }
+    const timer = setTimeout(() => setCanDismiss(true), 1000)
+    return () => clearTimeout(timer)
   }, [ready])
 
   useEffect(() => {
@@ -27,8 +39,28 @@ export default function ReaderSplash({ id, title, img, ready, onFinished }) {
     }
   }, [phase, onFinished])
 
+  const handleSkip = () => {
+    if (!canDismiss) return
+    setPhase('exit')
+  }
+
   return (
-    <div ref={rootRef} className={`reader-splash simple phase-${phase}`} style={{ background: '#FEFFF4' }}>
+    <div
+      ref={rootRef}
+      className={`reader-splash simple phase-${phase} theme-${theme}`}
+      style={{ background: palette.bg, color: palette.ink }}
+      role={canDismiss ? 'button' : undefined}
+      tabIndex={canDismiss ? 0 : -1}
+      aria-label={canDismiss ? "Appuyez pour passer l'interstitiel" : undefined}
+      onClick={handleSkip}
+      onKeyDown={(e) => {
+        if (!canDismiss) return
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleSkip()
+        }
+      }}
+    >
       <div className="reader-splash__card">
         {img && (<img className="reader-splash__img" src={img} alt="" />)}
       </div>
@@ -39,5 +71,3 @@ export default function ReaderSplash({ id, title, img, ready, onFinished }) {
     </div>
   )
 }
-
-

@@ -9,6 +9,16 @@ import Quickbar from './ui/Quickbar.jsx'
 import BookmarksPanel from './ui/BookmarksPanel.jsx'
 import Gate from './ui/Gate.jsx'
 import { detectInApp } from './utils/ua.ts'
+import {
+  isFavorite,
+  setFavorite,
+  getProgress,
+  getSessionFlag,
+  setSessionFlag,
+  setSessionData,
+  removeSessionData,
+  migrateOldKeys
+} from './utils/storage.ts'
 
 export default function App() {
   const eyebrowRef = useRef(null)
@@ -16,9 +26,7 @@ export default function App() {
   const actionsRef = useRef(null)
   const gateRef = useRef(null)
   const [showFab, setShowFab] = useState(false)
-  const [showGate, setShowGate] = useState(() => {
-    try { return sessionStorage.getItem('hub:gateDismissed') === '1' ? false : true } catch { return true }
-  })
+  const [showGate, setShowGate] = useState(() => !getSessionFlag('gate:dismissed'))
   const [gateState, setGateState] = useState('idle')
   // Fix baseUrl to work in both dev and production
   const baseUrl = import.meta.env.BASE_URL || './'
@@ -142,7 +150,7 @@ export default function App() {
     const inApp = detectInApp()
     setIsInApp(inApp)
     if (inApp) {
-      const firstDone = localStorage.getItem('iab:firstActionDone') === '1'
+      const firstDone = getSessionFlag('iab:first-action')
       setBannerMode(firstDone ? 'compact' : 'full')
     }
   }, [])
@@ -154,7 +162,7 @@ export default function App() {
       return
     }
     if (isInApp) {
-      const firstDone = localStorage.getItem('iab:firstActionDone') === '1'
+      const firstDone = getSessionFlag('iab:first-action')
       setBannerMode(firstDone ? 'compact' : 'full')
     }
   }, [isReaderRoute, isInApp])
@@ -162,8 +170,8 @@ export default function App() {
   useEffect(() => {
     if (!isInApp || isReaderRoute) return
     const onFirst = () => {
-      if (localStorage.getItem('iab:firstActionDone') !== '1') {
-        try { localStorage.setItem('iab:firstActionDone','1') } catch {}
+      if (!getSessionFlag('iab:first-action')) {
+        setSessionFlag('iab:first-action', true)
         setBannerMode('compact')
       }
       window.removeEventListener('pointerdown', onFirst, true)
@@ -185,7 +193,7 @@ export default function App() {
     const onFs = () => {
       const fsEl = document.fullscreenElement || document.webkitFullscreenElement
       setIsFullscreen(!!fsEl)
-      try { sessionStorage.setItem('hub:fs', fsEl ? '1' : '0') } catch {}
+      setSessionFlag('fs:active', !!fsEl)
       if (!fsEl && window.innerWidth < 769) {
         document.body.classList.add('force-mobile')
         setTimeout(() => document.body.classList.remove('force-mobile'), 1500)
@@ -193,7 +201,6 @@ export default function App() {
     }
     document.addEventListener('fullscreenchange', onFs)
     document.addEventListener('webkitfullscreenchange', onFs)
-    // initialize state
     onFs()
     return () => {
       document.removeEventListener('fullscreenchange', onFs)
@@ -201,42 +208,36 @@ export default function App() {
     }
   }, [])// Gate helpers: fullscreen + one-shot audio signature
   // Fallback pseudo-fullscreen for in-app browsers that don't support Fullscreen API
-  const enablePseudoFullscreen = () => {
+  const enablePseudoFullscreen = useCallback(() => {
     try {
       document.documentElement.classList.add('pseudo-fullscreen')
       document.body.classList.add('pseudo-fullscreen')
-      try { sessionStorage.setItem('hub:pseudoFS','1') } catch {}
+      setSessionFlag('fs:pseudo', true)
       const apply = () => {
         try { document.documentElement.style.setProperty('--inner-h', `${window.innerHeight}px`) } catch {}
         try { window.scrollTo(0, 1) } catch {}
       }
       apply()
-      // Update on viewport changes
       const onResize = () => setTimeout(apply, 100)
       const onOrient = () => setTimeout(apply, 300)
       window.addEventListener('resize', onResize, { passive: true })
       window.addEventListener('orientationchange', onOrient, { passive: true })
     } catch {}
-  }
+  }, [])
 
-  const enterFullscreen = async () => {
-    // Detect in-app browsers via shared utility
+  const enterFullscreen = useCallback(async () => {
     const isInAppBrowser = detectInApp()
-
-    // Always try the Fullscreen API on user gesture
     const el = document.documentElement
     const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen || el.mozRequestFullScreen
     if (typeof req === 'function') {
       try { await req.call(el) } catch {}
     }
-
-    // In in-app browsers, fall back to pseudo-fullscreen to maximize viewport
     if (isInAppBrowser) {
       enablePseudoFullscreen()
     }
-  }
+  }, [enablePseudoFullscreen])
 
-  const exitFullscreen = async () => {
+  const exitFullscreen = useCallback(async () => {
     try {
       if (document.exitFullscreen) await document.exitFullscreen()
       else if (document.webkitExitFullscreen) await document.webkitExitFullscreen()
@@ -244,10 +245,10 @@ export default function App() {
     try {
       document.documentElement.classList.remove('pseudo-fullscreen')
       document.body.classList.remove('pseudo-fullscreen')
-      sessionStorage.setItem('hub:pseudoFS','0')
-      sessionStorage.setItem('hub:fs','0')
+      setSessionFlag('fs:pseudo', false)
+      setSessionFlag('fs:active', false)
     } catch {}
-  }
+  }, [])
 
   const toggleFullscreen = useCallback(() => {
     if (isFullscreen) {
@@ -318,8 +319,7 @@ export default function App() {
       for (const ch of chapters) {
         const cid = String(ch?.id || '')
         if (!cid) continue
-        let fav = false
-        try { fav = (localStorage.getItem(`hub:fav:${taleId}:${cid}`) === '1') } catch { fav = false }
+        const fav = isFavorite(taleId, cid)
         if (fav) {
           items.push({ chapterId: cid, title: ch?.title || `Chapitre ${cid}`, count: 1, pageIndex: 0 })
         }
@@ -466,7 +466,7 @@ export default function App() {
   useEffect(() => {
     const onStorage = (ev) => {
       try {
-        if (typeof ev?.key === 'string' && ev.key.startsWith('hub:fav:')) {
+        if (typeof ev?.key === 'string' && ev.key.startsWith('st:fav:')) {
           setFavTick((t) => t + 1)
         }
       } catch {}
@@ -475,7 +475,7 @@ export default function App() {
     return () => window.removeEventListener('storage', onStorage)
   }, [])
 
-  const startGate = async () => {
+  const startGate = useCallback(async () => {
     if (gateState !== 'idle') return
     // Lock layout immediately to prevent any underlay paint during viewport changes
     try {
@@ -542,10 +542,8 @@ export default function App() {
       if (finished) return
       finished = true
       setGateState('finishing')
-      // Remove no-scroll class when gate is finishing
       document.body.classList.remove('no-scroll')
-      // Persist dismissal and keep DOM long enough for CSS fade (500ms)
-      try { sessionStorage.setItem('hub:gateDismissed','1') } catch {}
+      setSessionFlag('gate:dismissed', true)
       setTimeout(() => {
         try {
           const veil = document.getElementById('gate-veil')
@@ -561,72 +559,18 @@ export default function App() {
       }, 650)
     }
 
-    try {
-      // Always try audio on user gesture (works in most in-app browsers)
-      const possiblePaths = [
-        `${baseUrl}signature.mp3`,
-        `./signature.mp3`,
-        `/Hub-de-fou-2/signature.mp3`,
-        `signature.mp3`
-      ]
-      
-      let audioLoaded = false
-      const audio = new Audio()
-      
-      // Standard audio settings
-      audio.preload = 'auto'
-      audio.volume = 1.0
-      audio.muted = false
-      // Improve mobile / in-app compatibility
-      // playsInline is a no-op for audio but harmless and helps on some WebViews
-      try { audio.playsInline = true } catch {}
-      
-      for (const path of possiblePaths) {
-        try {
-          audio.src = path
-          // Kick playback immediately within the gesture chain
-          audio.load()
-          const playPromise = audio.play()
-          if (playPromise !== undefined) {
-            await playPromise
-          }
-          audioLoaded = true
-          break
-        } catch {
-          // Try next path
-          continue
-        }
-      }
-      
-      if (audioLoaded) {
-        audio.addEventListener('ended', finish, { once: true })
-        try {
-          const playPromise = audio.play()
-          if (playPromise !== undefined) {
-            await playPromise
-          }
-        } catch (playError) {
-          console.warn('Audio play failed:', playError)
-        }
-        setTimeout(finish, 4000)
-      } else {
-        console.warn('Could not load signature.mp3')
-        setTimeout(finish, 4000)
-      }
-    } catch (error) {
-      console.warn('Audio setup failed:', error)
-      setTimeout(finish, 4000)
-    }
-  }
+    // Skip heavy audio intro to avoid blocking loops; run a short branded pause instead
+    setTimeout(finish, 600)
+  }, [gateState, enterFullscreen])
 
   // On hub refresh: keep hub (no gate) and try to restore fullscreen state
   useEffect(() => {
     if (isReaderRoute) return
     try {
-      const dismissed = sessionStorage.getItem('hub:gateDismissed') === '1'
+      const dismissed = getSessionFlag('gate:dismissed')
       if (dismissed) setShowGate(false)
-      const wasFS = sessionStorage.getItem('hub:fs') === '1'
-      const wasPseudo = sessionStorage.getItem('hub:pseudoFS') === '1'
+      const wasFS = getSessionFlag('fs:active')
+      const wasPseudo = getSessionFlag('fs:pseudo')
       if (wasFS) {
         enterFullscreen().catch(() => { if (wasPseudo) enablePseudoFullscreen() })
       } else if (wasPseudo) {
@@ -715,6 +659,7 @@ export default function App() {
             <span className="hero__tag hero__tag--age">18+</span>
           </div>
 
+
           {/* Actions (CTA + bookmark) */}
           <div className="hero__actions" ref={actionsRef}>
             <button className="hero__cta" type="button"
@@ -749,7 +694,7 @@ export default function App() {
           const unlocked = !!(ents?.tales?.[taleId] || ents?.chapters?.[`${taleId}:${chapterId}`])
           const label = ch?.title || `Chapitre ${chapterId}`
           const img = tale?.cover || `https://picsum.photos/800/450?random=${chapterId}`
-          const fav = (() => { try { return localStorage.getItem(`hub:fav:${taleId}:${chapterId}`) === '1' } catch { return false } })()
+          const fav = isFavorite(taleId, chapterId)
           return (
             <article
               key={chapterId}
@@ -777,11 +722,7 @@ export default function App() {
                   aria-pressed={fav}
                   onClick={(e) => {
                     e.stopPropagation()
-                    try {
-                      const key = `hub:fav:${taleId}:${chapterId}`
-                      if (localStorage.getItem(key) === '1') localStorage.removeItem(key)
-                      else localStorage.setItem(key, '1')
-                    } catch {}
+                    setFavorite(taleId, chapterId, !fav)
                     setFavTick(t => t + 1)
                   }}
                   title={fav ? 'Retirer des signets' : 'Ajouter aux signets'}

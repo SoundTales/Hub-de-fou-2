@@ -1,11 +1,108 @@
+/**
+ * Résout le chemin source d'un cue (boucle d'ambiance)
+ * @param {string} src - Chemin relatif ou absolu
+ * @returns {string} URL complète
+ */
+function resolveCueSource(src) {
+  if (!src) return '';
+  if (src.startsWith('http://') || src.startsWith('https://')) return src;
+  if (src.startsWith('/')) return src;
+  return `/assets/audio/cues/${src}`;
+}
+
+/**
+ * Résout le chemin source d'un dialogue (voix)
+ * @param {string} src - Chemin relatif ou absolu
+ * @returns {string} URL complète
+ */
+function resolveVoiceSource(src) {
+  if (!src) return '';
+  if (src.startsWith('http://') || src.startsWith('https://')) return src;
+  if (src.startsWith('/')) return src;
+  return `/assets/audio/voices/${src}`;
+}
+
+/**
+ * Résout le chemin source d'un SFX
+ * @param {string} src - Chemin relatif ou absolu
+ * @returns {string} URL complète
+ */
+function resolveSfxSource(src) {
+  if (!src) return '';
+  if (src.startsWith('http://') || src.startsWith('https://')) return src;
+  if (src.startsWith('/')) return src;
+  return `/assets/audio/sfx/${src}`;
+}
+
 export function createAudioEngine() {
   let ctx = null
   let master = null, music = null, sfx = null, voice = null
   let desiredMusic = 0.8
+  const voicePlayback = {
+    node: null,
+    buffer: null,
+    html: null,
+    htmlHandler: null,
+    src: null,
+    status: 'idle',
+    offset: 0,
+    startedAt: 0,
+    resolve: null,
+    handleEnded: null,
+    meta: null,
+    duck: { amount: 0.5, release: 480 }
+  }
   const bufferCache = new Map()
   const lru = []
   const MAX_BUFFERS = 16
   const METRIC_WINDOW = 100
+  const duckMusic = (duckDb = 0.5) => {
+    if (!music || !ctx) return
+    const now = ctx.currentTime
+    music.gain.cancelScheduledValues(now)
+    music.gain.setTargetAtTime(Math.max(0, Math.min(1, desiredMusic * duckDb)), now, 0.05)
+  }
+  const restoreMusic = (releaseMs = 480) => {
+    if (!music || !ctx) return
+    const now = ctx.currentTime
+    music.gain.cancelScheduledValues(now)
+    music.gain.setTargetAtTime(Math.max(0, desiredMusic), now, Math.max(0.05, releaseMs / 1000))
+  }
+  const clearVoiceNode = () => {
+    if (voicePlayback.node) {
+      if (voicePlayback.handleEnded) voicePlayback.node.removeEventListener('ended', voicePlayback.handleEnded)
+      try { voicePlayback.node.stop() } catch {}
+    }
+    voicePlayback.node = null
+    voicePlayback.handleEnded = null
+  }
+  const clearHtmlVoice = () => {
+    if (voicePlayback.html) {
+      if (voicePlayback.htmlHandler) voicePlayback.html.removeEventListener('ended', voicePlayback.htmlHandler)
+      try { voicePlayback.html.pause?.() } catch {}
+    }
+    voicePlayback.html = null
+    voicePlayback.htmlHandler = null
+  }
+  const resetVoiceState = (resolvePromise = true) => {
+    clearVoiceNode()
+    clearHtmlVoice()
+    if (resolvePromise && voicePlayback.resolve) {
+      try { voicePlayback.resolve() } catch {}
+    }
+    voicePlayback.resolve = null
+    voicePlayback.buffer = null
+    voicePlayback.src = null
+    voicePlayback.status = 'idle'
+    voicePlayback.offset = 0
+    voicePlayback.startedAt = 0
+    voicePlayback.meta = null
+    voicePlayback.duck = { amount: 0.5, release: 480 }
+  }
+  const finishVoicePlayback = () => {
+    restoreMusic(voicePlayback.duck.release)
+    resetVoiceState(true)
+  }
   const metrics = {
     fetchMs: { cue: [], sfx: [], voice: [], prefetch: [] },
     decodeMs: { cue: [], sfx: [], voice: [], prefetch: [] },
@@ -170,45 +267,151 @@ export function createAudioEngine() {
     }
   }
 
-  const playVoice = async (src, { duckDb = 0.5, releaseMs = 480 } = {}) => {
+  const playVoice = async (src, { duckDb = 0.5, releaseMs = 480, metaId = null } = {}) => {
     if (!src) return
     await ensureContext()
-    if (src === 'test-beep') { try { await playBeep(voice) } catch {}; return }
-    if (ctx.state !== 'running') {
-      try { const el = new Audio(src); try { el.crossOrigin = 'anonymous' } catch {}; const t0 = performance.now(); await el.play(); pushMetric('htmlStartMs','voice',performance.now()-t0); return } catch {}
+    if (voicePlayback.status !== 'idle') restoreMusic(voicePlayback.duck.release)
+    resetVoiceState(true)
+    voicePlayback.duck = { amount: duckDb, release: releaseMs }
+    voicePlayback.meta = metaId || null
+    voicePlayback.src = src
+    if (src === 'test-beep') {
+      try { await playBeep(voice) } catch {}
+      return
+    }
+    const playbackPromise = new Promise(resolve => { voicePlayback.resolve = resolve })
+    const startWithBuffer = async () => {
+      const buf = await fetchBuffer(src, { category: 'voice' })
+      voicePlayback.buffer = buf
+      voicePlayback.status = 'playing'
+      voicePlayback.offset = 0
+      const node = ctx.createBufferSource()
+      node.buffer = buf
+      voicePlayback.node = node
+      const onEnded = () => {
+        if (voicePlayback.status !== 'playing') return
+        finishVoicePlayback()
+      }
+      voicePlayback.handleEnded = onEnded
+      node.addEventListener('ended', onEnded)
+      duckMusic(duckDb)
+      node.connect(voice)
+      voicePlayback.startedAt = ctx.currentTime
+      node.start(0)
+      return playbackPromise
     }
     try {
-      const buf = await fetchBuffer(src, { category: 'voice' })
-      const node = ctx.createBufferSource(); node.buffer = buf
-      node.connect(voice)
-      const now = ctx.currentTime
-      const orig = desiredMusic
-      if (music && music.gain) {
-        music.gain.cancelScheduledValues(now)
-        music.gain.setTargetAtTime(orig * duckDb, now, 0.05)
-      }
-      node.start(now)
-      node.addEventListener('ended', () => {
-        const t = ctx.currentTime
-        if (music && music.gain) {
-          music.gain.cancelScheduledValues(t)
-          music.gain.setTargetAtTime(orig, t, Math.max(0.05, releaseMs / 1000))
+      return await startWithBuffer()
+    } catch (err) {
+      try {
+        const el = new Audio(src)
+        try { el.crossOrigin = 'anonymous' } catch {}
+        el.loop = false
+        voicePlayback.html = el
+        voicePlayback.status = 'playing'
+        voicePlayback.offset = 0
+        voicePlayback.duck = { amount: duckDb, release: releaseMs }
+        const handler = () => {
+          if (voicePlayback.status !== 'playing') return
+          finishVoicePlayback()
         }
-      }, { once: true })
-    } catch (e) {
-      try { const el = new Audio(src); try { el.crossOrigin = 'anonymous' } catch {}; const t0 = performance.now(); await el.play(); pushMetric('htmlStartMs','voice',performance.now()-t0) } catch {}
+        voicePlayback.htmlHandler = handler
+        el.addEventListener('ended', handler)
+        duckMusic(duckDb)
+        await el.play()
+        return playbackPromise
+      } catch (fallbackErr) {
+        resetVoiceState(true)
+        throw err
+      }
     }
   }
+
+  const pauseVoice = () => {
+    if (voicePlayback.status !== 'playing') return false
+    if (voicePlayback.node) {
+      if (ctx) {
+        const elapsed = Math.max(0, ctx.currentTime - voicePlayback.startedAt)
+        const duration = voicePlayback.buffer?.duration || 0
+        voicePlayback.offset = Math.min(duration, Math.max(0, voicePlayback.offset + elapsed))
+      }
+      clearVoiceNode()
+    } else if (voicePlayback.html) {
+      try {
+        voicePlayback.offset = voicePlayback.html.currentTime || voicePlayback.offset
+        voicePlayback.html.pause()
+      } catch {}
+    }
+    voicePlayback.status = 'paused'
+    restoreMusic(voicePlayback.duck.release)
+    return true
+  }
+
+  const resumeVoice = async () => {
+    if (voicePlayback.status !== 'paused') return false
+    if (voicePlayback.html) {
+      try {
+        if (!Number.isNaN(voicePlayback.offset)) voicePlayback.html.currentTime = voicePlayback.offset
+        await voicePlayback.html.play()
+        voicePlayback.status = 'playing'
+        return true
+      } catch {
+        return false
+      }
+    }
+    if (!voicePlayback.buffer) return false
+    await ensureContext()
+    const duration = voicePlayback.buffer.duration || 0
+    const offset = Math.min(Math.max(0, voicePlayback.offset), Math.max(0, duration - 0.01))
+    const node = ctx.createBufferSource()
+    node.buffer = voicePlayback.buffer
+    voicePlayback.node = node
+    voicePlayback.status = 'playing'
+    voicePlayback.startedAt = ctx.currentTime
+    const onEnded = () => {
+      if (voicePlayback.status !== 'playing') return
+      finishVoicePlayback()
+    }
+    voicePlayback.handleEnded = onEnded
+    node.addEventListener('ended', onEnded)
+    duckMusic(voicePlayback.duck.amount)
+    node.connect(voice)
+    node.start(0, offset)
+    return true
+  }
+
+  const getVoiceOffset = () => {
+    if (voicePlayback.status === 'playing') {
+      if (voicePlayback.node && ctx) {
+        const elapsed = Math.max(0, ctx.currentTime - voicePlayback.startedAt)
+        return Math.max(0, voicePlayback.offset + elapsed)
+      }
+      if (voicePlayback.html) {
+        try { return voicePlayback.html.currentTime || voicePlayback.offset } catch { return voicePlayback.offset }
+      }
+    }
+    return voicePlayback.offset
+  }
+  const getSnapshot = () => ({
+    state: ctx?.state || 'idle',
+    music: currentMusicSrc ? { src: currentMusicSrc, volume: desiredMusic } : null,
+    voice: voicePlayback.src ? { src: voicePlayback.src, status: voicePlayback.status, metaId: voicePlayback.meta, offset: getVoiceOffset() } : null,
+    timestamp: ctx?.currentTime || 0
+  })
 
   return {
     async ensureStarted() { await ensureContext(); try { sessionStorage.setItem('audioPrimed','1'); sessionStorage.setItem('audioPrimedAt', String(Date.now())) } catch {} },
     async setCue(src, opts) { await setCue(src, opts) },
     async playSfx(src) { await playSfx(src) },
     async playVoice(src, opts) { await playVoice(src, opts) },
+    pauseVoice() { return pauseVoice() },
+    async resumeVoice() { return await resumeVoice() },
+    getVoiceState() { return { status: voicePlayback.status, src: voicePlayback.src, metaId: voicePlayback.meta } },
     setMusicVolume(v) { desiredMusic = Math.max(0, Math.min(1, v)); if (music) music.gain.value = desiredMusic },
     setVoiceVolume(v) { if (voice) voice.gain.value = Math.max(0, Math.min(1, v)) },
     async prefetch(url) { try { await fetchBuffer(url, { category: 'prefetch' }) } catch {} },
     get state() { return ctx?.state || 'idle' },
-    get nodes() { return { ctx, master, music, sfx, voice } }
+    get nodes() { return { ctx, master, music, sfx, voice } },
+    getSnapshot() { return getSnapshot() }
   }
 }

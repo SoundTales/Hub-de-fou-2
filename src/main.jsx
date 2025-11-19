@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './styles.css';
 import './gesturePrime.js';
+import { migrateOldKeys } from './utils/storage.ts';
 
 // Input-modality: pointer vs keyboard (Tab) to control focus rings on mobile
 (() => {
@@ -14,6 +15,9 @@ import './gesturePrime.js';
   window.addEventListener('mousedown', setPointer, true);
   window.addEventListener('keydown', setKeyboard, true);
 })();
+
+// Migration des anciennes clés au démarrage
+migrateOldKeys()
 
 class ErrorBoundary extends React.Component {
   constructor(props) {

@@ -64,7 +64,11 @@ export async function getTales(options = {}) {
     ])
   } catch {}
   // Inline minimal (fallback ultime)
-  const chapters = Array.from({ length: 12 }, (_, i) => ({ id: String(i + 1), title: `Chapitre ${i + 1}` }))
+  const chapters = Array.from({ length: 12 }, (_, i) => ({ 
+    id: String(i + 1), 
+    title: `Chapitre ${i + 1}`,
+    cover: `https://picsum.photos/800/450?random=${100 + i}`
+  }))
   return {
     tales: [
       {
@@ -77,8 +81,30 @@ export async function getTales(options = {}) {
         id: 'tale2',
         title: 'NEBULA',
         cover: 'https://picsum.photos/800/450?random=202',
-        chapters: Array.from({ length: 8 }, (_, i) => ({ id: String(i + 1), title: `Chapitre ${i + 1}` }))
+        chapters: Array.from({ length: 8 }, (_, i) => ({ 
+          id: String(i + 1), 
+          title: `Chapitre ${i + 1}`,
+          cover: `https://picsum.photos/800/450?random=${200 + i}`
+        }))
       }
     ]
   }
+}
+
+export async function getSignedAudioUrl({ type = 'voice', resource, taleId, chapterId }) {
+  if (!resource) return null
+  const query = new URLSearchParams({
+    type,
+    resource,
+    taleId: taleId || '',
+    chapterId: chapterId || ''
+  })
+  try {
+    const res = await fetch(`/api/audio/sign?${query.toString()}`, { credentials: 'include' })
+    if (res.ok) {
+      const data = await res.json().catch(() => null)
+      if (data?.url) return data.url
+    }
+  } catch {}
+  return null
 }

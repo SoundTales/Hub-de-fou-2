@@ -4,11 +4,12 @@ const clamp01 = (v) => Math.min(1, Math.max(0, Number.isFinite(v) ? v : 0))
 const toPercent = (v) => Math.round(clamp01(v) * 100)
 
 export default function MusicRail({
-  value = 0.8,
+  value = 0.5,
   onChange,
-  label = 'Volume ambiance',
+  label = 'Ambiance / Th\u00E8me',
   step = 0.05,
   largeStep = 0.2,
+  onToggleMute,
 }) {
   const trackRef = useRef(null)
   const rafRef = useRef(null)
@@ -99,35 +100,44 @@ export default function MusicRail({
   }, [emit, largeStep, step, value])
 
   const percent = toPercent(value)
+  const toggleMute = useCallback(() => {
+    if (typeof onToggleMute === 'function') onToggleMute()
+  }, [onToggleMute])
 
   return (
-    <div
-      className="music-rail"
-      role="slider"
-      tabIndex={0}
-      aria-label={label}
-      aria-orientation="vertical"
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={percent}
-      aria-valuetext={`${percent}%`}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerEnd}
-      onPointerCancel={handlePointerEnd}
-      onKeyDown={handleKeyDown}
-    >
-      <div className="music-rail__icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="18" height="18">
-          <path
-            fill="currentColor"
-            d="M9 4.5v9.1a3.5 3.5 0 1 0 1.5 2.9V8.2l7-1.4v6.77a3.5 3.5 0 1 0 1.5 2.9V4.8L9 4.5z"
-          />
-        </svg>
+    <div className="potard">
+      <div
+        className="music-rail"
+        role="slider"
+        tabIndex={0}
+        aria-label={label}
+        aria-orientation="vertical"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+        aria-valuetext={`${percent}%`}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        onKeyDown={handleKeyDown}
+      >
+        <div className="music-rail__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18">
+            <path
+              fill="currentColor"
+              d="M9 4.5v9.1a3.5 3.5 0 1 0 1.5 2.9V8.2l7-1.4v6.77a3.5 3.5 0 1 0 1.5 2.9V4.8L9 4.5z"
+            />
+          </svg>
+        </div>
+        <div className="music-rail__track" ref={trackRef}>
+          <div className="music-rail__fill" style={{ transform: `scaleY(${clamp01(value)})` }} />
+        </div>
       </div>
-      <div className="music-rail__track" ref={trackRef}>
-        <div className="music-rail__fill" style={{ transform: `scaleY(${clamp01(value)})` }} />
-      </div>
+      <button type="button" className="music-rail__value" onClick={toggleMute} aria-label={`${label} ${percent}%`}>
+        {percent}%
+      </button>
     </div>
   )
 }
+

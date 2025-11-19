@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react-swc';
 export default defineConfig({
   appType: 'spa',
   assetsInclude: ['**/*.mp3','**/*.ogg','**/*.wav','**/*.svg'],
-  base: '/Hub-de-fou-2/', // match GitHub repository name for Pages deploy
+  base: './', // use relative base so builds work at any subpath (e.g., GitHub Pages)
   plugins: [react()],
   root: 'src',
   build: {

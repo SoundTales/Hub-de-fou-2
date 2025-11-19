@@ -1,38 +1,591 @@
 {
-  "tales": [
+  "id": "4",
+  "taleId": "osrase-01",
+  "title": "Chapitre 4 : Train de vie",
+  "blocks": [
     {
-      "id": "tale1",
-      "title": "OSRASE",
-      "cover": "https://picsum.photos/800/450?random=101",
-      "chapters": [
-        { "id": "1", "title": "Chapitre 1" },
-        { "id": "2", "title": "Chapitre 2" },
-        { "id": "3", "title": "Chapitre 3" },
-        { "id": "4", "title": "Chapitre 4" },
-        { "id": "5", "title": "Chapitre 5" },
-        { "id": "6", "title": "Chapitre 6" },
-        { "id": "7", "title": "Chapitre 7" },
-        { "id": "8", "title": "Chapitre 8" },
-        { "id": "9", "title": "Chapitre 9" },
-        { "id": "10", "title": "Chapitre 10" },
-        { "id": "11", "title": "Chapitre 11" },
-        { "id": "12", "title": "Chapitre 12" }
-      ]
+      "type": "para",
+      "id": "p1",
+      "text": "Les gouttes déformaient les montagnes au loin. Le verre, aussi froid que le marbre, transpirait. Comme s’il contribuait à l’effort du train. J’observais la réfraction lorsque, sur le ciel nuageux, apparut la lampe du couloir. Par la porte de la cabine, grande ouverte, la lumière jaunâtre imprimait mon reflet sur le paysage. Mes cheveux formaient une masse sombre. Je scrutais mes yeux, dont la couleur était à peine devinable, le contour de ma joue, troublé par le double vitrage."
     },
     {
-      "id": "tale2",
-      "title": "NEBULA",
-      "cover": "https://picsum.photos/800/450?random=202",
-      "chapters": [
-        { "id": "1", "title": "Chapitre 1" },
-        { "id": "2", "title": "Chapitre 2" },
-        { "id": "3", "title": "Chapitre 3" },
-        { "id": "4", "title": "Chapitre 4" },
-        { "id": "5", "title": "Chapitre 5" },
-        { "id": "6", "title": "Chapitre 6" },
-        { "id": "7", "title": "Chapitre 7" },
-        { "id": "8", "title": "Chapitre 8" }
-      ]
+      "type": "dialogue",
+      "id": "d1",
+      "speaker": "Vander",
+      "text": "Vous me rappelez ma femme lorsque l’on s’est rencontrés.",
+      "voice": "vander_01"
+    },
+    {
+      "type": "dialogue",
+      "id": "d2",
+      "speaker": "Vander",
+      "text": "Elle était d’une beauté à faire rougir ses amies. De jalousie, bien sûr. Il faut croire que le temps rattrape toutes les femmes.",
+      "voice": "vander_02"
+    },
+    {
+      "type": "para",
+      "id": "p2",
+      "text": "Je sortis de mes songes pour le regarder. Il tenait son porte-documents sur ses genoux, agrippant la tranche avec ses doigts. Je me demandais comment il osait dire cela, alors même que le cuir de la banquette s’affaissait sous son poids."
+    },
+    {
+      "type": "dialogue",
+      "id": "d3",
+      "speaker": "Vander",
+      "text": "Vous direz à votre père que son savoir-faire est grandement apprécié. Savoir que mon minerai sert à de telles orfèvreries donne une autre saveur aux affaires. Certains confrères envient beaucoup la relation privilégiée que nous avons.",
+      "voice": "vander_03"
+    },
+    {
+      "type": "dialogue",
+      "id": "d4",
+      "speaker": "Zora",
+      "text": "Je lui en ferai part.",
+      "voice": "zora_04"
+    },
+    {
+      "type": "para",
+      "id": "p3",
+      "text": "L’espace d’un instant, j’aurais souhaité que la vitre se brise, libérant cette jeune femme d’une surface qui l’enchaînait à ma vie. Dans le reflet, je vis un homme s’arrêter à la porte. Il passa ses doigts dans ses cheveux, qui débordaient sur ses oreilles, et rajusta sa longue veste sombre d’un seul geste. Il observa le couloir d’où il venait avant de poser son regard sur moi. Son visage m’était familier. Je me retournai afin de lui demander la raison de sa venue, mais il était déjà en mouvement. Alors qu’il disparaissait derrière la paroi, j’eus le temps de voir le pan de sa veste terne et ses chaussures, datées mais très bien cirées. L’espace d’une seconde, j’aperçus son visage. Il ressemblait à celui d’un jeune garçon que j’avais vu dans un Osrase, il y a des années."
+    },
+    {
+      "type": "dialogue",
+      "id": "d5",
+      "speaker": "?",
+      "text": "Zora, vous allez bien ?",
+      "voice": "unknown_05"
+    },
+    {
+      "type": "dialogue",
+      "id": "d6",
+      "speaker": "Zora",
+      "text": "Oui, je vais bien. Excusez-moi.",
+      "voice": "zora_06"
+    },
+    {
+      "type": "para",
+      "id": "p4",
+      "text": "Un vacarme provenait du couloir. Un policier s’arrêta devant la porte, affichant un sourire convenu."
+    },
+    {
+      "type": "dialogue",
+      "id": "d7",
+      "speaker": "Agent",
+      "text": "Bonjour, n’auriez-vous pas vu un homme passer ici très récemment ?",
+      "voice": "agent_07"
+    },
+    {
+      "type": "dialogue",
+      "id": "d8",
+      "speaker": "Vander",
+      "text": "Non, c’est tout à fait calme depuis une heure.",
+      "voice": "vander_08"
+    },
+    {
+      "type": "dialogue",
+      "id": "d9",
+      "speaker": "Agent",
+      "text": "Bien. Excusez-nous du dérangement.",
+      "voice": "agent_09"
+    },
+    {
+      "type": "para",
+      "id": "p5",
+      "text": "Même s’il m’avait regardée au mot « bonjour », ce n’est pas à moi qu’il avait posé la question. Mon avis n’aurait de toute manière pas prévalu sur celui de monsieur Vander, qui ne voyait ni les gens ni le dégoût sur les visages. Deux autres policiers le suivirent d’un pas décidé. Il se passait quelque chose et je devais lever mes doutes sur l’identité de ce fantôme, surgissant du passé."
+    },
+    {
+      "type": "dialogue",
+      "id": "d10",
+      "speaker": "Zora",
+      "text": "Finalement, non, ça ne va pas. Je dois me passer de l’eau sur le visage.",
+      "voice": "zora_10"
+    },
+    {
+      "type": "dialogue",
+      "id": "d11",
+      "speaker": "Vander",
+      "text": "Eh bien ? Voulez-vous que je vous accompagne ?",
+      "voice": "vander_11"
+    },
+    {
+      "type": "dialogue",
+      "id": "d12",
+      "speaker": "Zora",
+      "text": "Non, merci, ça ira.",
+      "voice": "zora_12"
+    },
+    {
+      "type": "dialogue",
+      "id": "d13",
+      "speaker": "Vander",
+      "text": "Allons, cet endroit est mal indiqué.",
+      "voice": "vander_13"
+    },
+    {
+      "type": "dialogue",
+      "id": "d14",
+      "speaker": "Zora",
+      "text": "Si je me perds, je crierai à l’aide pour qu’un homme vienne m’aider, Vander.",
+      "voice": "zora_14"
+    },
+    {
+      "type": "para",
+      "id": "p6",
+      "text": "Il replaça son veston, un peu gêné, avant d’attraper le journal coincé sous sa cuisse. Sortant de la cabine, livrée à moi-même, je ressentis une certaine excitation. Mes jambes marchaient toutes seules ; si cet homme était Malone, il s’agissait de ma seule chance de lui parler. En suivant le couloir, je jetai un coup d’œil aux hublots des cabines sur ma droite. Tout me paraissait calme jusqu’à ce que j’arrive au wagon-restaurant. Celui-ci était presque vide : l’heure du dîner était passée. Seuls cinq hommes troublaient le silence. Au centre de la pièce, trois policiers me tournaient le dos. Face à eux, un homme de petite taille se tenait à gauche du jeune homme à la longue veste. Je l’avais retrouvé. Restant en retrait à l’entrée du wagon, je tirai une chaise pour m’y asseoir."
+    },
+    {
+      "type": "dialogue",
+      "id": "d15",
+      "speaker": "Officier",
+      "text": "Pour la dernière fois, lequel de vous deux est François de Clairmont ?",
+      "voice": "officier_15"
+    },
+    {
+      "type": "dialogue",
+      "id": "d16",
+      "speaker": "Jeune homme",
+      "text": "La question est stupide.",
+      "voice": "jeune_homme_16"
+    },
+    {
+      "type": "dialogue",
+      "id": "d17",
+      "speaker": "?",
+      "text": "C’est moi !",
+      "voice": "unknown_17"
+    },
+    {
+      "type": "dialogue",
+      "id": "d18",
+      "speaker": "Agent",
+      "text": "Sortez leurs papiers.",
+      "voice": "agent_18"
+    },
+    {
+      "type": "para",
+      "id": "p7",
+      "text": "Après avoir fouillé les poches des suspects, ils sortirent deux portefeuilles. L’un semblait onéreux, l’autre paraissait dater d’une vingtaine d’années. Le petit bonhomme, à la vue du portefeuille élimé extrait de sa poche, parut décontenancé."
+    },
+    {
+      "type": "dialogue",
+      "id": "d19",
+      "speaker": "?",
+      "text": "Mais… ce n’est pas à moi ! Le mien, c’est celui-là !",
+      "voice": "unknown_19"
+    },
+    {
+      "type": "dialogue",
+      "id": "d20",
+      "speaker": "Jeune homme",
+      "text": "Si ce n’est pas le vôtre, rendez-le. Quant au mien, il ne sera jamais le vôtre.",
+      "voice": "jeune_homme_20"
+    },
+    {
+      "type": "para",
+      "id": "p8",
+      "text": "Celui à la longue veste regarda ensuite par-dessus l’épaule du policier et fit un mouvement de tête. J’eus le sentiment qu’il signalait à quelqu’un qu’il arriverait plus tard. Le policier se retourna ; je fis de même, et un homme sortit du wagon-restaurant au même moment. Peut-être un ami à lui, me disais-je, revenant à la conversation qui m’intéressait. L’agent avait sorti les pièces d’identification des deux suspects et en tenait une dans chaque main."
+    },
+    {
+      "type": "dialogue",
+      "id": "d21",
+      "speaker": "Officier",
+      "text": "Même si la contrefaçon est soignée, elle n’en est pas moins grossière à des yeux aguerris. Embarquez-le-moi.",
+      "voice": "officier_21"
+    },
+    {
+      "type": "dialogue",
+      "id": "d22",
+      "speaker": "?",
+      "text": "Vous faites une grave erreur !",
+      "voice": "unknown_22"
+    },
+    {
+      "type": "para",
+      "id": "p9",
+      "text": "L’officier rendit son bien à l’élégant jeune homme, tandis que l’accusé était emmené de force."
+    },
+    {
+      "type": "dialogue",
+      "id": "d23",
+      "speaker": "Officier",
+      "text": "Veuillez nous excuser, monsieur de Clairmont, c’est une situation tout à fait extraordinaire.",
+      "voice": "officier_23"
+    },
+    {
+      "type": "dialogue",
+      "id": "d24",
+      "speaker": "Jeune homme",
+      "text": "Les temps sont troubles ; ces gens feraient n’importe quoi pour entrer en ville.",
+      "voice": "jeune_homme_24"
+    },
+    {
+      "type": "dialogue",
+      "id": "d25",
+      "speaker": "Officier",
+      "text": "Je ne vous le fais pas dire. Ces gens n’ont plus de limites.",
+      "voice": "officier_25"
+    },
+    {
+      "type": "dialogue",
+      "id": "d26",
+      "speaker": "Jeune homme",
+      "text": "Faisons-le réfléchir avant de poser le pied à terre.",
+      "voice": "jeune_homme_26"
+    },
+    {
+      "type": "para",
+      "id": "p10",
+      "text": "Clairmont attrapa l’avant-bras du policier pour lui serrer la main. Cela me sembla durer trop longtemps. Ce dernier fixa sa main, toujours prise dans celle du jeune homme."
+    },
+    {
+      "type": "dialogue",
+      "id": "d27",
+      "speaker": "Jeune homme",
+      "text": "Sans vous, ce rat salirait mon nom dans toute la ville. Laissez-moi vous remercier convenablement.",
+      "voice": "jeune_homme_27"
+    },
+    {
+      "type": "para",
+      "id": "p11",
+      "text": "L’agent hésitait. Il regarda le couloir où étaient partis ses collègues avant de faire glisser quelque chose dans sa poche de pantalon."
+    },
+    {
+      "type": "dialogue",
+      "id": "d28",
+      "speaker": "Agent",
+      "text": "Merci, monsieur. Celui-ci aura son compte, je vous l’assure.",
+      "voice": "agent_28"
+    },
+    {
+      "type": "dialogue",
+      "id": "d29",
+      "speaker": "Jeune homme",
+      "text": "À la bonne heure.",
+      "voice": "jeune_homme_29"
+    },
+    {
+      "type": "para",
+      "id": "p12",
+      "text": "L’homme se pressa en direction du wagon suivant. Je me levai d’un bond et, au milieu de l’allée, je l’interpellai."
+    },
+    {
+      "type": "dialogue",
+      "id": "d30",
+      "speaker": "Zora",
+      "text": "Monsieur de Clairmont, attendez !",
+      "voice": "zora_30"
+    },
+    {
+      "type": "para",
+      "id": "p13",
+      "text": "Il s’arrêta dans son élan et se retourna face à moi."
+    },
+    {
+      "type": "dialogue",
+      "id": "d31",
+      "speaker": "Zora",
+      "text": "Je suis journaliste ; est-ce que vous auriez un instant à m’accorder ?",
+      "voice": "zora_31"
+    },
+    {
+      "type": "para",
+      "id": "p14",
+      "text": "Sans un mot, l’homme regarda sa montre et reprit son chemin. J’en étais persuadée, c’était lui."
+    },
+    {
+      "type": "dialogue",
+      "id": "d32",
+      "speaker": "Zora",
+      "text": "Malone !",
+      "voice": "zora_32"
+    },
+    {
+      "type": "para",
+      "id": "p15",
+      "text": "Le jeune homme s’arrêta. Il marqua un temps considérable avant de se retourner, avec un air bien différent. Il marcha lentement en ma direction et son visage, jusqu’alors fermé, devint étrangement amical."
+    },
+    {
+      "type": "dialogue",
+      "id": "d33",
+      "speaker": "Jeune homme",
+      "text": "Journaliste, vous dites ? Quel journal vous emploie ?",
+      "voice": "jeune_homme_33"
+    },
+    {
+      "type": "dialogue",
+      "id": "d34",
+      "speaker": "Zora",
+      "text": "Je suis indépendante.",
+      "voice": "zora_34"
+    },
+    {
+      "type": "dialogue",
+      "id": "d35",
+      "speaker": "Jeune homme",
+      "text": "Et sur quoi travaillez-vous en ce moment ?",
+      "voice": "jeune_homme_35"
+    },
+    {
+      "type": "dialogue",
+      "id": "d36",
+      "speaker": "Zora",
+      "text": "Sur un enfant. Un enfant du secteur 7.",
+      "voice": "zora_36"
+    },
+    {
+      "type": "dialogue",
+      "id": "d37",
+      "speaker": "Jeune homme",
+      "text": "Étrange affaire que cela. Asseyez-vous, mademoiselle ?",
+      "voice": "jeune_homme_37"
+    },
+    {
+      "type": "dialogue",
+      "id": "d38",
+      "speaker": "Zora",
+      "text": "Zora Lane.",
+      "voice": "zora_38"
+    },
+    {
+      "type": "para",
+      "id": "p16",
+      "text": "Je pris place sur la chaise qu’il m’indiquait, sans sourciller."
+    },
+    {
+      "type": "dialogue",
+      "id": "d39",
+      "speaker": "Jeune homme",
+      "text": "D’où venez-vous ?",
+      "voice": "jeune_homme_39"
+    },
+    {
+      "type": "dialogue",
+      "id": "d40",
+      "speaker": "Zora",
+      "text": "Je suis née au secteur 1.",
+      "voice": "zora_40"
+    },
+    {
+      "type": "dialogue",
+      "id": "d41",
+      "speaker": "Jeune homme",
+      "text": "Mais vous n’y avez pas grandi, n’est-ce pas ?",
+      "voice": "jeune_homme_41"
+    },
+    {
+      "type": "dialogue",
+      "id": "d42",
+      "speaker": "Jeune homme",
+      "text": "Vous savez, je n’ai que faire des pauvres.",
+      "voice": "jeune_homme_42"
+    },
+    {
+      "type": "para",
+      "id": "p17",
+      "text": "Je restai consternée par cette déclaration. S’il était Malone, il avait bien changé."
+    },
+    {
+      "type": "dialogue",
+      "id": "d43",
+      "speaker": "Zora",
+      "text": "C’est faux. Au contraire. Je crois qu’il n’y a rien qui vous importe plus.",
+      "voice": "zora_43"
+    },
+    {
+      "type": "dialogue",
+      "id": "d44",
+      "speaker": "Jeune homme",
+      "text": "Vous prendrez bien un verre d’eau, mademoiselle Lane ?",
+      "voice": "jeune_homme_44"
+    },
+    {
+      "type": "dialogue",
+      "id": "d45",
+      "speaker": "Zora",
+      "text": "Oui, bien sûr.",
+      "voice": "zora_45"
+    },
+    {
+      "type": "dialogue",
+      "id": "d46",
+      "speaker": "Jeune homme",
+      "text": "Un verre d’eau.",
+      "voice": "jeune_homme_46"
+    },
+    {
+      "type": "dialogue",
+      "id": "d47",
+      "speaker": "Zora",
+      "text": "Vous ne prenez rien ?",
+      "voice": "zora_47"
+    },
+    {
+      "type": "dialogue",
+      "id": "d48",
+      "speaker": "Jeune homme",
+      "text": "Et pourquoi une jeune femme comme vous chercherait-elle un petit diable ?",
+      "voice": "jeune_homme_48"
+    },
+    {
+      "type": "para",
+      "id": "p18",
+      "text": "J’en profitai pour observer en détail son visage. La ressemblance était sans équivoque."
+    },
+    {
+      "type": "dialogue",
+      "id": "d49",
+      "speaker": "Zora",
+      "text": "Malone, je t’ai vu à travers l’Osrase d’Aimé. Je connais le secret que tu…",
+      "voice": "zora_49"
+    },
+    {
+      "type": "dialogue",
+      "id": "d50",
+      "speaker": "Jeune homme",
+      "text": "Un Osrase ?",
+      "voice": "jeune_homme_50"
+    },
+    {
+      "type": "dialogue",
+      "id": "d51",
+      "speaker": "Zora",
+      "text": "Je peux t’aider. Je veux t’aider, Malone.",
+      "voice": "zora_51"
+    },
+    {
+      "type": "para",
+      "id": "p19",
+      "text": "Le serveur déposa mon verre d’eau sur la table. L’homme regarda sa montre et se leva de sa chaise."
+    },
+    {
+      "type": "dialogue",
+      "id": "d52",
+      "speaker": "Zora",
+      "text": "Où vas-tu ?",
+      "voice": "zora_52"
+    },
+    {
+      "type": "dialogue",
+      "id": "d53",
+      "speaker": "Jeune homme",
+      "text": "Vous me confondez avec un enfant.",
+      "voice": "jeune_homme_53"
+    },
+    {
+      "type": "para",
+      "id": "p20",
+      "text": "Il tapota deux fois le bord de mon verre du bout des doigts."
+    },
+    {
+      "type": "dialogue",
+      "id": "d54",
+      "speaker": "Jeune homme",
+      "text": "Buvez, Lane, ça vous fera du bien.",
+      "voice": "jeune_homme_54"
+    },
+    {
+      "type": "para",
+      "id": "p21",
+      "text": "Je l’observai quitter le wagon-restaurant, seule avec ma commande. Il semblait quelques années plus jeune que moi ; pourtant, il s’était comporté comme un parent face à son enfant. Je regardai le liquide qui tremblotait en rythme, puis je bus et me levai dans la foulée. Avant de sortir, je m’arrêtai."
+    },
+    {
+      "type": "dialogue",
+      "id": "d55",
+      "speaker": "Zora",
+      "text": "Est-ce que je vous dois quelque chose ?",
+      "voice": "zora_55"
+    },
+    {
+      "type": "para",
+      "id": "p22",
+      "text": "Les deux employés se regardèrent."
+    },
+    {
+      "type": "dialogue",
+      "id": "d56",
+      "speaker": "Serveur",
+      "text": "Non, madame, vous n’avez commandé que de l’eau.",
+      "voice": "serveur_56"
+    },
+    {
+      "type": "para",
+      "id": "p23",
+      "text": "Je repris la direction de ma cabine, sans bruit. À ma droite, les vitres ne laissaient transparaître que la nuit. Le couloir, tamisé par les lumières, me mena jusqu’à la porte de ma cabine. Je retrouvai le vieux Vander affalé sur la banquette, recouvert de son journal. Finalement, ce n’était peut-être pas Malone. Je me fustigeai pour le comportement que j’avais eu avec cet inconnu, me demandant si mon attitude aurait des répercussions. Debout face à la vitre, je me voyais plus clairement que jamais. Étreinte d’une robe que je n’aurais su faire et qui était, de toute manière, trop onéreuse pour que j’essaie. Une enfant, que le père présentait à des « Vander » d’un secteur à l’autre. Des hommes dont les dilemmes moraux ne troublaient pas le sommeil."
+    },
+    {
+      "type": "dialogue",
+      "id": "d57",
+      "speaker": "Vander",
+      "text": "Seigneur Dieu !",
+      "voice": "vander_57"
+    },
+    {
+      "type": "dialogue",
+      "id": "d58",
+      "speaker": "Zora",
+      "text": "Que se passe-t-il ?",
+      "voice": "zora_58"
+    },
+    {
+      "type": "para",
+      "id": "p24",
+      "text": "Trois policiers passèrent en courant derrière moi, laissant un courant d’air sur ma peau."
+    },
+    {
+      "type": "dialogue",
+      "id": "d59",
+      "speaker": "Vander",
+      "text": "J’ai fait ma part du marché, dites bien à votre père que je ne rembourserai rien !",
+      "voice": "vander_59"
+    },
+    {
+      "type": "dialogue",
+      "id": "d60",
+      "speaker": "Zora",
+      "text": "Vander ! Expliquez-vous !",
+      "voice": "zora_60"
+    },
+    {
+      "type": "para",
+      "id": "p25",
+      "text": "Le front collé au vitrage, il retira une main de ses cheveux pour me montrer la queue du train. Je me pressai de son côté de la cabine pour constater. Le train, après un large virage, nous permettait de voir l’intégralité de cette longue chenille de wagons que nous tirions depuis des heures. La lune, presque pleine, nous laissait percevoir, sur les rails bien en arrière, deux wagons désormais complètement détachés. Presque à l’arrêt sur la voie ferrée, je distinguai, grâce à leurs lampes, des silhouettes à l’intérieur comme à l’extérieur des wagons. Un son strident se fit entendre, accompagné d’une forte décélération, nous forçant à nous retenir aux parois de la cabine."
+    },
+    {
+      "type": "dialogue",
+      "id": "d61",
+      "speaker": "Zora",
+      "text": "C’est lui, c’est Malone.",
+      "voice": "zora_61"
+    },
+    {
+      "type": "para",
+      "id": "p26",
+      "text": "Je sortis à la hâte, tenant ma robe d’une main."
+    },
+    {
+      "type": "dialogue",
+      "id": "d62",
+      "speaker": "Vander",
+      "text": "Où allez-vous ?",
+      "voice": "vander_62"
+    },
+    {
+      "type": "para",
+      "id": "p27",
+      "text": "Je courus à travers les wagons, espérant qu’il ne soit pas encore sorti du train. Arrivée à l’extrémité du convoi, j’ouvris la porte qui me séparait de l’extérieur. Le vent sifflait. Au loin, l’un des wagons était en feu. Je compris à quel point ce petit révolutionnaire de l’Osrase était sérieux. Des lambeaux de papier consumés s’élevèrent. À la lumière du brasier naissant, je distinguai, sur le second, un homme qui jetait des sacs aux autres, en contrebas. À mi-chemin sur la voie, un homme à la longue veste marchait d’un pas calme. Je lus, sur un mur menaçant de s’écrouler au bord des rails : « Bienvenue au secteur 7 »."
     }
+  ],
+  "triggers": [
+    { "kind": "cue", "id": "intro", "at": "progress:0.0",  "src": "audio/music/ch-04_intro.mp3", "loop": true },
+    { "kind": "cue", "id": "mid",   "at": "progress:0.33", "src": "audio/music/ch-04_mid.mp3",   "loop": true },
+    { "kind": "cue", "id": "late",  "at": "progress:0.66", "src": "audio/music/ch-04_late.mp3",  "loop": true },
+
+    { "kind": "sfx", "id": "sfx_noise",  "at": "para:p4",  "src": "audio/sfx/corridor_noise.mp3" },
+    { "kind": "sfx", "id": "sfx_brake",  "at": "para:p25", "src": "audio/sfx/train_brake_screech.mp3" },
+    { "kind": "sfx", "id": "sfx_wind",   "at": "para:p27", "src": "audio/sfx/wind.mp3" },
+    { "kind": "sfx", "id": "sfx_fire",   "at": "para:p27", "src": "audio/sfx/fire_crackle.mp3" }
+
+    /* Astuce d’implémentation (Codex) :
+       - Générer automatiquement, côté préprocess, une entrée "voice" par dialogue:
+         { "kind":"voice", "id":"voice_dX", "at":"dialogue:dX", "src":"audio/voices/<voice>.mp3" }
+       - Ici, on laisse la liseuse mapper `blocks[].voice` -> chemin audio côté app/build. */
   ]
 }
