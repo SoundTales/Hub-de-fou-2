@@ -1,41 +1,57 @@
 # Dépendances
 node_modules/
-pnpm-lock.yaml
-package-lock.json
-yarn.lock
+.pnp
+.pnp.js
 
-# Artéfacts de build
+# Build outputs
 dist/
 build/
-coverage/
-.storybook-static/
+out/
+.next/
+.nuxt/
+.output/
 
-# Contrôle de version et IDE
-.git/
-.gitignore
-.vscode/
-.idea/
+# Assets lourds
+public/images/
+public/audio/
+public/videos/
+assets/images/
+assets/audio/
+*.mp3
+*.mp4
+*.wav
+*.mov
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.pdf
 
-# Caches
+# Cache
 .cache/
-.tmp/
-.temp/
-.parcel-cache/
+.vite/
 .turbo/
-.eslintcache
+.vercel/
 
-# Logs et temporaires
+# Tests
+coverage/
+.nyc_output/
+
+# Logs
 *.log
-*.tmp
-*.swp
-npm-debug.log*
-yarn-error.log*
-
-# Environnements
-.env
-.env.*
-*.local
+logs/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
