@@ -76,7 +76,6 @@ export default function PageViewport({
   onDialogueTap,
   onSwipeNext,
   onSwipePrev,
-  onDoubleTap,
   overlayOpen,
   onPrimeAudio,
   onOverlayGesture,
@@ -87,21 +86,6 @@ export default function PageViewport({
   const shareRef = useRef(null)
   const [shareTarget, setShareTarget] = useState(null)
   const closeShare = useCallback(() => setShareTarget(null), [])
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    let lastTs = 0, lastX = 0, lastY = 0
-    const onPd = (e) => {
-      if (!overlayOpen && e.target.closest('.dlg')) return
-      const now = performance.now()
-      const x = e.clientX, y = e.clientY
-      if (now - lastTs < 300 && Math.abs(x - lastX) < 16 && Math.abs(y - lastY) < 16) onDoubleTap?.()
-      lastTs = now; lastX = x; lastY = y
-    }
-    el.addEventListener('pointerdown', onPd)
-    return () => el.removeEventListener('pointerdown', onPd)
-  }, [onDoubleTap, overlayOpen])
 
   useEffect(() => {
     const el = ref.current

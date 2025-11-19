@@ -184,31 +184,6 @@ const getInitialTheme = () => {
   return 'light'
 }
 
-function ChapterFavButton({ chapterId, taleId = 'tale1' }) {
-  const getKey = () => `hub:fav:${taleId}:${chapterId}`
-  const [on, setOn] = useState(() => {
-    try { return localStorage.getItem(getKey()) === '1' } catch { return false }
-  })
-  useEffect(() => {
-    try { setOn(localStorage.getItem(getKey()) === '1') } catch {}
-  }, [chapterId, taleId])
-  return (
-    <button
-      className={`reader__fav ${on ? 'is-on' : ''}`}
-      aria-label={on ? 'Retirer des signets' : 'Ajouter aux signets'}
-      aria-pressed={on}
-      onClick={() => {
-        try {
-          const key = getKey()
-          if (localStorage.getItem(key) === '1') { localStorage.removeItem(key); setOn(false) }
-          else { localStorage.setItem(key, '1'); setOn(true) }
-        } catch {}
-      }}
-      title={on ? 'Retirer des signets' : 'Ajouter aux signets'}
-      style={{ marginRight: 8 }}
-    ><svg className="hero__bookmark-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1z" /></svg></button>
-  )
-}
 export default function ReaderShell({ chapterId, baseUrl }) {
   const taleId = 'tale1'
   const [overlayOpen, setOverlayOpen] = useState(false)
@@ -248,6 +223,7 @@ export default function ReaderShell({ chapterId, baseUrl }) {
   const [overlayPhase, setOverlayPhase] = useState('closed')
   const [carouselNav, setCarouselNav] = useState({ prev: false, next: false })
   const lastCueRef = useRef({ src: null, pageIndex: -1 })
+  const overlaySwipeState = useRef({ pointerId: null, startY: 0, active: false })
   const overlayTitleId = useId()
   const overlayDescId = useId()
 
@@ -270,7 +246,6 @@ export default function ReaderShell({ chapterId, baseUrl }) {
   const requestOverlay = useCallback((intent = 'toggle') => {
     if (intent === 'open') {
       setOverlayOpen(true)
-      setOverlayTab(prev => (prev === 'none' ? 'chapters' : prev))
       try { engineRef.current?.ensureStarted() } catch {}
       return
     }
@@ -278,7 +253,6 @@ export default function ReaderShell({ chapterId, baseUrl }) {
       setOverlayOpen(prev => {
         const next = !prev
         if (next) {
-          setOverlayTab(tab => (tab === 'none' ? 'chapters' : tab))
           try { engineRef.current?.ensureStarted() } catch {}
         } else {
           setOverlayTab('none')
@@ -289,11 +263,6 @@ export default function ReaderShell({ chapterId, baseUrl }) {
     }
     closeOverlay()
   }, [closeOverlay])
-  const openOverlayTab = useCallback((tab = 'chapters') => {
-    setOverlayTab(tab)
-    requestOverlay('open')
-  }, [requestOverlay])
-
   // Focus trap + Esc for overlay
   useEffect(() => {
     if (!overlayOpen) return
@@ -407,6 +376,45 @@ export default function ReaderShell({ chapterId, baseUrl }) {
       }
     }
   }, [overlayOpen, overlayRendered])
+  useEffect(() => {
+    if (!overlayRendered) return
+    const root = overlayRef.current
+    if (!root) return
+    const state = overlaySwipeState.current
+    const onDown = (e) => {
+      if (!overlayOpen) return
+      if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return
+      if (e.target?.closest?.('[data-overlay-swipe-lock="true"]')) return
+      state.pointerId = e.pointerId
+      state.startY = e.clientY
+      state.active = true
+    }
+    const onMove = (e) => {
+      if (!state.active || e.pointerId !== state.pointerId) return
+      const dy = e.clientY - state.startY
+      if (dy > 28) {
+        state.active = false
+        state.pointerId = null
+        requestOverlay('close')
+      }
+    }
+    const onEnd = (e) => {
+      if (state.pointerId !== null && e.pointerId === state.pointerId) {
+        state.pointerId = null
+        state.active = false
+      }
+    }
+    root.addEventListener('pointerdown', onDown, { passive: true })
+    root.addEventListener('pointermove', onMove, { passive: true })
+    root.addEventListener('pointerup', onEnd, { passive: true })
+    root.addEventListener('pointercancel', onEnd, { passive: true })
+    return () => {
+      root.removeEventListener('pointerdown', onDown)
+      root.removeEventListener('pointermove', onMove)
+      root.removeEventListener('pointerup', onEnd)
+      root.removeEventListener('pointercancel', onEnd)
+    }
+  }, [overlayRendered, overlayOpen, requestOverlay])
 
   useEffect(() => {
     const on = () => {
@@ -611,6 +619,23 @@ export default function ReaderShell({ chapterId, baseUrl }) {
       return 0
     })
   }, [])
+  const toggleFullscreen = useCallback(() => {
+    if (typeof document === 'undefined') return
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {})
+    } else {
+      document.documentElement?.requestFullscreen?.().catch(() => {})
+    }
+  }, [])
+  const activateOverlayTab = useCallback((tab) => {
+    if (!tab) return
+    if (overlayOpen && overlayTab === tab) {
+      closeOverlay()
+      return
+    }
+    setOverlayTab(tab)
+    if (!overlayOpen) requestOverlay('open')
+  }, [closeOverlay, overlayOpen, overlayTab, requestOverlay])
 
   // --- Bookmarks (per chapter) ---
   const loadBookmarks = useCallback(() => {
@@ -764,9 +789,6 @@ export default function ReaderShell({ chapterId, baseUrl }) {
   }, [])
 
   // Navigation handlers
-  const handleSwipeNext = useCallback(() => { setNavDir('next'); setPageIndex(i => Math.min(i + 1, pages.length - 1)) }, [pages.length])
-  const handleSwipePrev = useCallback(() => { setNavDir('prev'); setPageIndex(i => Math.max(i - 1, 0)) }, [])
-  const handleDoubleTap = useCallback(() => requestOverlay('toggle'), [requestOverlay])
 
   // --- Effects ---
 
@@ -1088,75 +1110,12 @@ export default function ReaderShell({ chapterId, baseUrl }) {
       {!showSplash && !paywall && (
         <>
           <header className="reader__header">
-            <div className="reader__header-left">
-              <button className="reader__back" onClick={() => { window.location.hash = '#/' }}>Retour</button>
-            </div>
+            <div className="reader__header-left" />
             <div className="reader__header-center">
-              <ChapterFavButton chapterId={chapterId} />
               <div className="reader__book">{(ast?.title || '\u00C0 JAMAIS, POUR TOUJOURS')}</div>
               <div className="reader__page">{Math.max(1, Math.min(pageIndex + 1, pages?.length || 1))}/{pages?.length || 1}</div>
             </div>
-            <div className="reader__header-right">
-              <div className="reader__text-stack">
-                <div className="reader__text-row">
-                  <button
-                    type="button"
-                    className={`reader__bookmark ${bookmarked ? 'is-on' : ''} ${bookmarkPulse ? 'has-pulse' : ''}`}
-                    aria-pressed={bookmarked}
-                    aria-label={bookmarked ? 'Supprimer le signet courant' : 'Ajouter cette page aux signets'}
-                    onClick={toggleBookmarkCurrent}
-                  >
-                    <svg className="reader__bookmark-icon" viewBox="0 0 24 24" aria-hidden="true">
-                      <path fill="currentColor" d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1z" />
-                    </svg>
-                  </button>
-                  <div className={`reader__text-pill ${textControlsAllActive ? 'is-boost' : ''}`}>
-                    <button
-                      type="button"
-                      className={`reader__segment ${isBoldActive ? 'is-active' : ''}`}
-                      aria-pressed={isBoldActive}
-                      onClick={() => setBoldBody(v => !v)}
-                    >B</button>
-                    <div className="reader__segment-sep" aria-hidden="true" />
-                    <button
-                      type="button"
-                      className={`reader__segment ${isScaleActive ? 'is-active' : ''}`}
-                      aria-pressed={isScaleActive}
-                      onClick={() => setFontDelta(isScaleActive ? 0 : 2)}
-                    >A+</button>
-                    <div className="reader__segment-sep" aria-hidden="true" />
-                    <button
-                      type="button"
-                      className={`reader__segment ${isAltFontActive ? 'is-active' : ''}`}
-                      aria-pressed={isAltFontActive}
-                      onClick={() => setFontFamily(f => (f === 'garamond' ? 'playfair' : 'garamond'))}
-                    >Aa</button>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="reader__theme-toggle"
-                  aria-pressed={theme === 'dark'}
-                  aria-label={theme === 'light' ? 'Activer le mode nuit' : 'Activer le mode jour'}
-                  onClick={() => setTheme(current => (current === 'light' ? 'dark' : 'light'))}
-                >
-                  <img
-                    src={theme === 'light' ? '/mode-jour.svg' : '/mode-nuit.svg'}
-                    alt=""
-                    aria-hidden="true"
-                    draggable="false"
-                  />
-                </button>
-              </div>
-              <button
-                type="button"
-                className="reader__overlay-btn"
-                onClick={() => openOverlayTab('chapters')}
-                aria-haspopup="dialog"
-              >
-                Chapitres
-              </button>
-            </div>
+            <div className="reader__header-right" />
           </header>
           <main className="reader__stage">
       {!audioPrimed && (
@@ -1192,7 +1151,6 @@ export default function ReaderShell({ chapterId, baseUrl }) {
                 onDialogueTap={handleDialogueTap}
                 onSwipeNext={() => { setNavDir('next'); setPageIndex(i => Math.min(i + 1, pages.length - 1)) }}
                 onSwipePrev={() => { setNavDir('prev'); setPageIndex(i => Math.max(i - 1, 0)) }}
-                onDoubleTap={() => requestOverlay('toggle')}
                 overlayOpen={overlayOpen}
                 onPrimeAudio={() => { engineRef.current?.ensureStarted() }}
                 onOverlayGesture={requestOverlay}
@@ -1224,7 +1182,8 @@ export default function ReaderShell({ chapterId, baseUrl }) {
               onPointerDown={handleOverlayPointerDown}
             >
               <div className="reader__overlay-surface">
-                <header className="reader__overlay-topbar reader__ui-row" data-row="0">
+                <div className="reader__overlay-top">
+                  <header className="reader__overlay-topbar reader__ui-row" data-row="0" data-overlay-swipe-lock="true">
                   <span id={overlayTitleId} className="reader__overlay-heading">R\u00E9glages de lecture</span>
                   <button
                     type="button"
@@ -1235,9 +1194,68 @@ export default function ReaderShell({ chapterId, baseUrl }) {
                     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M18.3 5.71L12 12l6.3 6.29-1.42 1.42L10.59 13.4 4.3 19.71 2.88 18.3 9.17 12 2.88 5.71 4.3 4.29l6.29 6.3 6.29-6.3z"/></svg>
                   </button>
                 </header>
-                <p id={overlayDescId} className="sr-only">Double tapez ou appuyez sur \u00C9chap pour fermer la palette.</p>
+                  <p id={overlayDescId} className="sr-only">Double tapez ou appuyez sur \u00C9chap pour fermer la palette.</p>
+              <div className="reader__overlay-controls reader__ui-row" data-row="1" data-overlay-swipe-lock="true">
+                <div className="reader__overlay-controls-left">
+                  <button className="reader__back" onClick={() => { window.location.hash = '#/' }}>Retour</button>
+                  <button className="reader__fullscreen" type="button" onClick={toggleFullscreen} aria-label="Basculer plein écran">
+                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M7 5H5v4h2V7h2V5H7zm10 0h-2v2h2v2h2V5h-2zm-2 12v2h2v-2h2v-2h-2v2h-2zm-8 0H5v2h4v-2H7v-2H5v2z"/></svg>
+                  </button>
+                  <button
+                    type="button"
+                    className={`reader__bookmark ${bookmarked ? 'is-on' : ''} ${bookmarkPulse ? 'has-pulse' : ''}`}
+                    aria-pressed={bookmarked}
+                    aria-label={bookmarked ? 'Supprimer le signet courant' : 'Ajouter cette page aux signets'}
+                    onClick={toggleBookmarkCurrent}
+                  >
+                    <svg className="reader__bookmark-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path fill="currentColor" d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1z" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="reader__overlay-controls-right">
+                  <div className={`reader__text-pill ${textControlsAllActive ? 'is-boost' : ''}`}>
+                    <button
+                      type="button"
+                      className={`reader__segment ${isBoldActive ? 'is-active' : ''}`}
+                      aria-pressed={isBoldActive}
+                      onClick={() => setBoldBody(v => !v)}
+                    >B</button>
+                    <div className="reader__segment-sep" aria-hidden="true" />
+                    <button
+                      type="button"
+                      className={`reader__segment ${isScaleActive ? 'is-active' : ''}`}
+                      aria-pressed={isScaleActive}
+                      onClick={() => setFontDelta(isScaleActive ? 0 : 2)}
+                    >A+</button>
+                    <div className="reader__segment-sep" aria-hidden="true" />
+                    <button
+                      type="button"
+                      className={`reader__segment ${isAltFontActive ? 'is-active' : ''}`}
+                      aria-pressed={isAltFontActive}
+                      onClick={() => setFontFamily(f => (f === 'garamond' ? 'playfair' : 'garamond'))}
+                    >Aa</button>
+                  </div>
+                  <button
+                    type="button"
+                    className="reader__theme-toggle"
+                    aria-pressed={theme === 'dark'}
+                    aria-label={theme === 'light' ? 'Activer le mode nuit' : 'Activer le mode jour'}
+                    onClick={() => setTheme(current => (current === 'light' ? 'dark' : 'light'))}
+                  >
+                    <img
+                      src={theme === 'light' ? '/mode-jour.svg' : '/mode-nuit.svg'}
+                      alt=""
+                      aria-hidden="true"
+                      draggable="false"
+                    />
+                  </button>
+                </div>
+              </div>
+                </div>
+                <div className="reader__overlay-bottom">
               {!showCarousel && (
-                <div className="reader__potards reader__ui-row" data-row="1" role="group" aria-label="Réglages audio">
+                <div className="reader__potards reader__ui-row" data-row="2" role="group" aria-label="Réglages audio" data-overlay-swipe-lock="true">
                   <VolumeKnob
                     label="Ambiance"
                     value={musicVolume}
@@ -1253,7 +1271,7 @@ export default function ReaderShell({ chapterId, baseUrl }) {
                 </div>
               )}
               {showCarousel && (
-                <div className={`reader__carousel-shell reader__ui-row ${carouselNav.prev ? 'has-prev' : ''} ${carouselNav.next ? 'has-next' : ''}`} data-row="2">
+                <div className={`reader__carousel-shell reader__ui-row ${carouselNav.prev ? 'has-prev' : ''} ${carouselNav.next ? 'has-next' : ''}`} data-row="2" data-overlay-swipe-lock="true">
                   <button
                     type="button"
                     className="reader__carousel-nav reader__carousel-nav--prev"
@@ -1264,14 +1282,34 @@ export default function ReaderShell({ chapterId, baseUrl }) {
                   >
                     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
                   </button>
-                  <ChapterCarousel
-                    items={carouselItems}
-                    theme={theme}
-                    onSelect={handleCarouselItemClick}
-                    carouselRef={carouselRef}
-                    onUpdateNav={updateCarouselNav}
-                    visible={showCarousel}
-                  />
+                  <div className="reader__carousel" ref={carouselRef} role="list" aria-live="polite">
+                    {carouselItems.length === 0 ? (
+                      <div className="reader__carousel-empty">
+                        {overlayTab === 'bookmark' ? 'Aucun signet sauvegard\u00E9.' : 'Contenu en cours de chargement.'}
+                      </div>
+                    ) : (
+                      carouselItems.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className="reader__thumb"
+                          role="listitem"
+                          onClick={() => handleCarouselItemClick(item)}
+                          aria-label={item.kind === 'chapter'
+                            ? `Aller \u00E0 la page ${item.badge}`
+                            : `Restaurer le signet page ${item.badge}`}
+                        >
+                          <div className="reader__thumb-img" aria-hidden="true">
+                            <span className="reader__thumb-badge">{item.badge}</span>
+                          </div>
+                          <div className="reader__thumb-body">
+                            <p className="reader__thumb-title">{item.title}</p>
+                            {item.snippet && <p className="reader__thumb-snippet">{item.snippet}</p>}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
                   <button
                     type="button"
                     className="reader__carousel-nav reader__carousel-nav--next"
@@ -1284,11 +1322,11 @@ export default function ReaderShell({ chapterId, baseUrl }) {
                   </button>
                 </div>
               )}
-              <div className="reader__dock reader__ui-row" data-row="3" role="group" aria-label="Contr\u00F4les secondaires">
+              <div className="reader__dock reader__ui-row" data-row="3" role="group" aria-label="Navigation secondaire" data-overlay-swipe-lock="true">
                 <button
                   type="button"
                   className={`reader__dock-circle ${isFirstPage ? 'is-disabled' : ''}`}
-                  aria-label={isFirstPage ? 'Premi\u00E8re page' : `Page pr\u00E9c\u00E9dente (${Math.max(1, pageIndex)})`}
+                  aria-label={isFirstPage ? 'Première page' : `Page précédente (${Math.max(1, pageIndex)})`}
                   aria-disabled={isFirstPage}
                   onClick={() => {
                     if (isFirstPage) return
@@ -1300,9 +1338,9 @@ export default function ReaderShell({ chapterId, baseUrl }) {
                 </button>
                 <button
                   type="button"
-                  className={`reader__dock-pill ${overlayTab==='bookmark' ? 'is-active' : ''}`}
-                  onClick={() => setOverlayTab(t => t==='bookmark'?'none':'bookmark')}
-                  aria-pressed={overlayTab === 'bookmark'}
+                  className={`reader__dock-pill ${(overlayOpen && overlayTab==='bookmark') ? 'is-active' : ''}`}
+                  aria-pressed={overlayOpen && overlayTab === 'bookmark'}
+                  onClick={() => activateOverlayTab('bookmark')}
                 >
                   MARQUE-PAGE
                 </button>
@@ -1316,9 +1354,9 @@ export default function ReaderShell({ chapterId, baseUrl }) {
                 </button>
                 <button
                   type="button"
-                  className={`reader__dock-pill ${overlayTab==='chapters' ? 'is-active' : ''}`}
-                  onClick={() => setOverlayTab(t => t==='chapters'?'none':'chapters')}
-                  aria-pressed={overlayTab === 'chapters'}
+                  className={`reader__dock-pill ${(overlayOpen && overlayTab==='chapters') ? 'is-active' : ''}`}
+                  aria-pressed={overlayOpen && overlayTab === 'chapters'}
+                  onClick={() => activateOverlayTab('chapters')}
                 >
                   CHAPITRAGE
                 </button>
@@ -1347,7 +1385,7 @@ export default function ReaderShell({ chapterId, baseUrl }) {
                 </button>
               </div>
               {overlayTab === 'bookmark' && (
-                <div className="reader__panel-actions reader__ui-row" data-row="4">
+                <div className="reader__panel-actions reader__ui-row" data-row="4" data-overlay-swipe-lock="true">
                   <button
                     type="button"
                     className={`reader__pill ${bookmarked ? 'is-active' : ''}`}
@@ -1363,6 +1401,7 @@ export default function ReaderShell({ chapterId, baseUrl }) {
                   )}
                 </div>
               )}
+                </div>
             </div>
           </div>
           )}
@@ -1392,6 +1431,9 @@ export default function ReaderShell({ chapterId, baseUrl }) {
     </div>
   )
 }
+
+
+
 
 
 
