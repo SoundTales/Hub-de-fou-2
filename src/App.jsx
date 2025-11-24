@@ -1,35 +1,131 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import ReaderShell from './reader/ReaderShell.jsx'
 import { getAudioEngine } from './reader/audioSingleton.js'
-import { createPortal } from 'react-dom'
 import { getTales, getEntitlements } from './api/client.js'
-import HubSplashLogo from './HubSplashLogo.jsx'
 import IABanner from './ui/IABanner.jsx'
 import Quickbar from './ui/Quickbar.jsx'
 import BookmarksPanel from './ui/BookmarksPanel.jsx'
-import Gate from './ui/Gate.jsx'
 import { detectInApp } from './utils/ua.ts'
 import {
   isFavorite,
   setFavorite,
-  getProgress,
   getSessionFlag,
-  setSessionFlag,
-  setSessionData,
-  removeSessionData,
-  migrateOldKeys
+  setSessionFlag
 } from './utils/storage.ts'
 
 export default function App() {
   const eyebrowRef = useRef(null)
   const titleRef = useRef(null)
   const actionsRef = useRef(null)
-  const gateRef = useRef(null)
   const [showFab, setShowFab] = useState(false)
-  const [showGate, setShowGate] = useState(() => !getSessionFlag('gate:dismissed'))
-  const [gateState, setGateState] = useState('idle')
   // Fix baseUrl to work in both dev and production
   const baseUrl = import.meta.env.BASE_URL || './'
+  const assetBase = (baseUrl || './').replace(/\/+$/, '')
+  const wordmarkUrl = `${assetBase}/${encodeURIComponent('Sound Tales.svg')}`
+  const heroImgUrl = 'https://static.wixstatic.com/media/b9ad46_9fcfea21c381472e97a9a9bc10386509~mv2.jpg'
+  const [artistFocus, setArtistFocus] = useState(null)
+  const [voiceFocus, setVoiceFocus] = useState(null)
+  const [voiceExpanded, setVoiceExpanded] = useState(false)
+  const creditsRef = useRef(null)
+
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (!artistFocus && !voiceFocus) return
+      const container = creditsRef.current
+      const insideCredits = container && container.contains(e.target)
+      if (insideCredits && e.target.closest('.pre-hub__credit-link')) {
+        // let the toggle handle its own state
+      } else if (!insideCredits || !e.target.closest('.pre-hub__credit-detail')) {
+        setArtistFocus(null)
+        setVoiceFocus(null)
+      }
+      try {
+        const activeEl = document.activeElement
+        if (activeEl && activeEl.classList?.contains('pre-hub__credit-link')) {
+          activeEl.blur()
+        }
+      } catch {}
+    }
+    document.addEventListener('mousedown', onDocClick, { capture: true })
+    return () => document.removeEventListener('mousedown', onDocClick, { capture: true })
+  }, [artistFocus, voiceFocus])
+  const artistData = {
+    auteur: {
+      name: 'Johnny Delaveau',
+      title: 'Auteur principal',
+      works: [
+        { id: 'work-1', title: 'Le prix de la haine', role: 'Auteur principal' }
+      ]
+    },
+    compositeur: {
+      name: 'Quentin Querel',
+      title: 'Compositeur',
+      works: [
+        { id: 'work-1', title: 'Le prix de la haine', role: 'Compositeur principal' }
+      ]
+    }
+  }
+  const voiceData = [
+    {
+      id: 'voix-malone',
+      name: 'Dupont Dupond',
+      title: 'Comédienne voix',
+      featured: true,
+      roleLabel: 'Malone',
+      works: [{ id: 'work-1', title: 'Le prix de la haine', role: 'Malone' }]
+    },
+    {
+      id: 'voix-zadig',
+      name: 'Dupont Dupond',
+      title: 'Comédien voix',
+      featured: true,
+      roleLabel: 'Zadig',
+      works: [{ id: 'work-1', title: 'Le prix de la haine', role: 'Zadig' }]
+    },
+    {
+      id: 'voix-zora',
+      name: 'Dupont Dupond',
+      title: 'Comédienne voix',
+      featured: true,
+      roleLabel: 'Zora',
+      works: [{ id: 'work-1', title: 'Le prix de la haine', role: 'Zora' }]
+    },
+    {
+      id: 'voix-albar',
+      name: 'Dupont Dupond',
+      title: 'Comédien voix',
+      featured: false,
+      roleLabel: 'Albar',
+      works: [{ id: 'work-1', title: 'Le prix de la haine', role: 'Albar' }]
+    },
+    {
+      id: 'voix-evelyne',
+      name: 'Dupont Dupond',
+      title: 'Comédienne voix',
+      featured: false,
+      roleLabel: 'Evelyne',
+      works: [{ id: 'work-1', title: 'Le prix de la haine', role: 'Evelyne' }]
+    },
+    {
+      id: 'voix-elan',
+      name: 'Dupont Dupond',
+      title: 'Comédien voix',
+      featured: false,
+      roleLabel: 'Elan',
+      works: [{ id: 'work-1', title: 'Le prix de la haine', role: 'Elan' }]
+    }
+  ]
+  // Preload hero/poster images to reduce first paint latency
+  useEffect(() => {
+    const urls = [heroImgUrl]
+    urls.forEach((src) => {
+      try {
+        const img = new Image()
+        img.fetchPriority = 'high'
+        img.src = src
+      } catch {}
+    })
+  }, [])
   // Mark current mode for style/behavior scoping (hub vs reader)
   const [isInApp, setIsInApp] = useState(false)
   const [bannerMode, setBannerMode] = useState('hidden')
@@ -54,15 +150,6 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
-  // Lock body scroll while gate is visible (all devices/in-app too)
-  useEffect(() => {
-    try {
-      if (showGate) document.body.classList.add('no-scroll')
-      else document.body.classList.remove('no-scroll')
-    } catch {}
-    return () => { try { document.body.classList.remove('no-scroll') } catch {} }
-  }, [showGate])
-
   // Load tales + entitlements (mock)
   useEffect(() => {
     let alive = true
@@ -83,13 +170,20 @@ export default function App() {
     return () => { alive = false }
   }, [baseUrl])
   const isReaderRoute = /^#\/?reader\//i.test(route)
+  const isHubRoute = /^#\/?hub/i.test(route)
 
   useEffect(() => {
-    if (!isReaderRoute) {
-      try { document.body.dataset.mode = 'hub' } catch {}
-    }
+    try {
+      if (isReaderRoute) {
+        delete document.body.dataset.mode
+      } else if (isHubRoute) {
+        document.body.dataset.mode = 'hub'
+      } else {
+        document.body.dataset.mode = 'presentation'
+      }
+    } catch {}
     return () => { try { delete document.body.dataset.mode } catch {} }
-  }, [isReaderRoute])
+  }, [isReaderRoute, isHubRoute])
 
   // Eyebrow fitter (keeps eyebrow width matching title)
   useEffect(() => {
@@ -206,7 +300,7 @@ export default function App() {
       document.removeEventListener('fullscreenchange', onFs)
       document.removeEventListener('webkitfullscreenchange', onFs)
     }
-  }, [])// Gate helpers: fullscreen + one-shot audio signature
+  }, [])// Fullscreen helpers
   // Fallback pseudo-fullscreen for in-app browsers that don't support Fullscreen API
   const enablePseudoFullscreen = useCallback(() => {
     try {
@@ -369,7 +463,7 @@ export default function App() {
           const pw = panelWidthFor(side)
           // avoid quickbar column if visible
           try {
-            const qbVisible = !!(showFab && !showGate)
+            const qbVisible = !!showFab
             const qb = document.querySelector('.quickbar')
             if (qbVisible && qb) {
               const qbr = qb.getBoundingClientRect()
@@ -392,7 +486,7 @@ export default function App() {
             const maxLeft = vw - margin - pw / 2
             left = Math.max(minLeft, Math.min(left, maxLeft))
             try {
-              const qbVisible = !!(showFab && !showGate)
+              const qbVisible = !!showFab
               const qb = document.querySelector('.quickbar')
               if (qbVisible && qb) {
                 const qbr = qb.getBoundingClientRect()
@@ -421,7 +515,7 @@ export default function App() {
 
   // Scroll-to-top hint (hub only): shows on upward scroll, hides with quickbar
   useEffect(() => {
-    if (isReaderRoute || showGate) { setShowScrollTop(false); return }
+    if (isReaderRoute) { setShowScrollTop(false); return }
     if (!showFab) { setShowScrollTop(false) }
     let last = Math.max(0, window.scrollY || document.documentElement.scrollTop || 0)
     let sticky = false
@@ -460,7 +554,7 @@ export default function App() {
       window.removeEventListener('scroll', onTick)
       window.removeEventListener('resize', onTick)
     }
-  }, [isReaderRoute, showGate, showFab])
+  }, [isReaderRoute, showFab])
 
   // Sync favorites across contexts (e.g., when toggled in reader)
   useEffect(() => {
@@ -475,110 +569,6 @@ export default function App() {
     return () => window.removeEventListener('storage', onStorage)
   }, [])
 
-  const startGate = useCallback(async () => {
-    if (gateState !== 'idle') return
-    // Lock layout immediately to prevent any underlay paint during viewport changes
-    try {
-      document.documentElement.classList.add('gate-lock')
-      document.body.classList.add('gate-lock')
-    } catch {}
-    // Detect in-app browsers
-    const userAgent = navigator.userAgent || navigator.vendor || window.opera
-    const isInAppBrowser = /FBAN|FBAV|Instagram|Messenger|Line\//i.test(userAgent) || /; wv\)/i.test(userAgent)
-
-    // Add no-scroll class only when safe (desktop/regular browsers)
-    if (!isInAppBrowser && window.innerWidth > 768) {
-      document.body.classList.add('no-scroll')
-    }
-    // Add structural veil immediately to avoid any flash during viewport changes
-    try {
-      let veil = document.getElementById('gate-veil')
-      if (!veil) {
-        veil = document.createElement('div')
-        veil.id = 'gate-veil'
-        Object.assign(veil.style, {
-          position: 'fixed', left: '0', top: '0', right: '0', bottom: '0',
-          background: '#424242', zIndex: '99999', pointerEvents: 'none'
-        })
-        document.body.appendChild(veil)
-      }
-    } catch {}
-    // Force a reflow so veil/gate-lock are painted before fullscreen height change
-    try { void document.body.offsetHeight } catch {}
-
-    // Lock gate element size to visual viewport during transition
-    const lockGateSize = () => {
-      try {
-        const h = (window.visualViewport && Math.ceil(window.visualViewport.height)) || window.innerHeight || 0
-        const el = gateRef.current
-        if (el && h) {
-          el.style.height = h + 'px'
-          el.style.minHeight = h + 'px'
-          el.style.width = '100vw'
-        }
-      } catch {}
-    }
-    lockGateSize()
-    const __gateSizeCleanups = []
-    try {
-      const onVv = () => lockGateSize()
-      if (window.visualViewport && typeof window.visualViewport.addEventListener === 'function') {
-        window.visualViewport.addEventListener('resize', onVv, { passive: true })
-        __gateSizeCleanups.push(() => window.visualViewport.removeEventListener('resize', onVv))
-      }
-      const onWin = () => lockGateSize()
-      window.addEventListener('resize', onWin, { passive: true })
-      __gateSizeCleanups.push(() => window.removeEventListener('resize', onWin))
-    } catch {}
-
-    // Request fullscreen within the same gesture (do not await)
-    try { enterFullscreen() } catch {}
-    // Prime audio in the same gesture chain
-    try { getAudioEngine().ensureStarted() } catch {}
-    // Switch to logo once guard layers are active and FS requested
-    setGateState('logo')
-    let finished = false
-    const finish = () => {
-      if (finished) return
-      finished = true
-      setGateState('finishing')
-      document.body.classList.remove('no-scroll')
-      setSessionFlag('gate:dismissed', true)
-      setTimeout(() => {
-        try {
-          const veil = document.getElementById('gate-veil')
-          if (veil) veil.remove()
-          // cleanup gate sizing locks
-          for (const fn of __gateSizeCleanups) { try { fn() } catch {} }
-          const el = gateRef.current
-          if (el) { el.style.height = ''; el.style.minHeight = ''; el.style.width = '' }
-          document.documentElement.classList.remove('gate-lock')
-          document.body.classList.remove('gate-lock')
-        } catch {}
-        setShowGate(false)
-      }, 650)
-    }
-
-    // Skip heavy audio intro to avoid blocking loops; run a short branded pause instead
-    setTimeout(finish, 600)
-  }, [gateState, enterFullscreen])
-
-  // On hub refresh: keep hub (no gate) and try to restore fullscreen state
-  useEffect(() => {
-    if (isReaderRoute) return
-    try {
-      const dismissed = getSessionFlag('gate:dismissed')
-      if (dismissed) setShowGate(false)
-      const wasFS = getSessionFlag('fs:active')
-      const wasPseudo = getSessionFlag('fs:pseudo')
-      if (wasFS) {
-        enterFullscreen().catch(() => { if (wasPseudo) enablePseudoFullscreen() })
-      } else if (wasPseudo) {
-        enablePseudoFullscreen()
-      }
-    } catch {}
-  }, [isReaderRoute])
-
   // Floating actions bar visibility when hero actions are off-screen
   useEffect(() => {
     const target = actionsRef.current
@@ -591,6 +581,270 @@ export default function App() {
     return () => io.disconnect()
   }, [isReaderRoute])
 
+  // Pre-hub blank page with a single entry button
+  if (!isReaderRoute && !isHubRoute) {
+    return (
+      <div className="pre-hub" data-theme="osrase">
+        <div className="pre-hub__inner">
+          <section className="pre-hub__hero">
+            <div className="pre-hub__media">
+                  <div className="pre-hub__poster">
+                    <img
+                    src={heroImgUrl}
+                    alt="Illustration de l'univers Osrase"
+                    loading="eager"
+                    fetchpriority="high"
+                    width="640"
+                    height="800"
+                  />
+                  </div>
+                </div>
+            <button
+              type="button"
+              className="pre-hub__cta"
+              onClick={() => { window.location.hash = '#/hub' }}
+            >
+              Commencer la lecture
+            </button>
+            <p className="pre-hub__lead">
+              Deux frères en quête de vengeance sont propulsés dans la machinerie du pouvoir : l’un par le système, l’autre par la révolte. Rendez-vous au sommet.
+            </p>
+          </section>
+
+          <section className="pre-hub__pillars" aria-label="Production originale">
+            <p className="pre-hub__eyebrow pre-hub__eyebrow--small">PRODUCTION ORIGINALE</p>
+            <img
+              className="pre-hub__wordmark"
+              src={wordmarkUrl}
+              alt="Sound Tales"
+              loading="lazy"
+            />
+            <div className="pre-hub__grid">
+              <div className="pre-hub__pillar">
+                <div className="pre-hub__icon pre-hub__icon--book" aria-hidden="true" data-icon="✦"></div>
+                <div className="pre-hub__pillar-body">
+                  <h3 className="pre-hub__pillar-title">TALE</h3>
+                  <p className="pre-hub__pillar-meta"><em>20 chapitres</em></p>
+                  <p className="pre-hub__pillar-text">
+                    L'histoire de Malone et Zadig. Un roman fantastique d'anticipation qui saura vous captiver.
+                  </p>
+                </div>
+              </div>
+              <div className="pre-hub__pillar">
+                <div className="pre-hub__icon pre-hub__icon--vinyl" aria-hidden="true" data-icon="◎"></div>
+                <div className="pre-hub__pillar-body">
+                  <h3 className="pre-hub__pillar-title">SOUND</h3>
+                  <p className="pre-hub__pillar-meta"><em>20 thèmes</em></p>
+                  <p className="pre-hub__pillar-text">
+                    Dans chaque chapitre, un thème original vous accompagne. Laissez porter par l'ambiance.
+                  </p>
+                </div>
+              </div>
+              <div className="pre-hub__pillar">
+                <div className="pre-hub__icon pre-hub__icon--bubble" aria-hidden="true" data-icon="✺"></div>
+                <div className="pre-hub__pillar-body">
+                  <h3 className="pre-hub__pillar-title">DIALOGUE</h3>
+                  <p className="pre-hub__pillar-meta"><em>Interactifs</em></p>
+                  <p className="pre-hub__pillar-text">
+                    Cliquez sur les dialogues pour écouter les personnages vivre la scène.
+                  </p>
+                </div>
+              </div>
+              <div className="pre-hub__pillar">
+                <div className="pre-hub__icon pre-hub__icon--photo" aria-hidden="true" data-icon="▣"></div>
+                <div className="pre-hub__pillar-body">
+                  <h3 className="pre-hub__pillar-title">PHOTOGRAPHIE</h3>
+                  <p className="pre-hub__pillar-meta"><em>20 illustrations</em></p>
+                  <p className="pre-hub__pillar-text">
+                    Une vue d'artiste indépendante vous est proposée à la fin de chaque chapitre.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="pre-hub__logo-mobile" aria-hidden="true"></div>
+          </section>
+
+          <section className="pre-hub__credits-section" aria-label="Artistes" ref={creditsRef}>
+            <div className="pre-hub__credits-grid">
+              <div className="pre-hub__credit-card">
+                <h3 className="pre-hub__credit-title">Création</h3>
+                <ul className="pre-hub__credit-list">
+                  <li className={`pre-hub__credit-item ${artistFocus === 'auteur' ? 'is-active' : ''}`}>
+                    <div className="pre-hub__credit-row">
+                      <span className="pre-hub__credit-nameplate"><strong>Auteur</strong> — Johnny Delaveau</span>
+                      <button
+                        type="button"
+                        className={`pre-hub__credit-link ${artistFocus === 'auteur' ? 'is-active' : ''}`}
+                        aria-expanded={artistFocus === 'auteur'}
+                        aria-haspopup="dialog"
+                        title="Voir les projets de Johnny Delaveau"
+                        onClick={(e) => {
+                          const next = artistFocus === 'auteur' ? null : 'auteur'
+                          setArtistFocus(next)
+                          if (!next) { try { e.currentTarget.blur() } catch {} }
+                        }}
+                      >
+                        <span aria-hidden="true" className="pre-hub__credit-link-icon"></span>
+                        <span className="pre-hub__sr">Ouvrir les projets de Johnny Delaveau</span>
+                      </button>
+                    </div>
+                    {artistFocus === 'auteur' && (
+                      <div className="pre-hub__credit-detail">
+                        <div className="pre-hub__credit-works">
+                          {artistData.auteur.works.map((w) => (
+                            <button
+                              key={w.id}
+                              type="button"
+                              className="pre-hub__credit-workcard"
+                              onClick={() => { window.location.hash = '#/' }}
+                            >
+                              <div className="pre-hub__credit-thumb" aria-hidden="true"></div>
+                              <div className="pre-hub__credit-texts">
+                                <p className="pre-hub__credit-work">{w.title}</p>
+                                <p className="pre-hub__credit-role">{w.role}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <div className="pre-hub__credit-actions">
+                          <button type="button" className="pre-hub__credit-action pre-hub__credit-action--ghost">Contacter l'artiste</button>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                  <li className={`pre-hub__credit-item ${artistFocus === 'compositeur' ? 'is-active' : ''}`}>
+                    <div className="pre-hub__credit-row">
+                      <span className="pre-hub__credit-nameplate"><strong>Compositeur</strong> — Quentin Querel</span>
+                      <button
+                        type="button"
+                        className={`pre-hub__credit-link ${artistFocus === 'compositeur' ? 'is-active' : ''}`}
+                        aria-expanded={artistFocus === 'compositeur'}
+                        aria-haspopup="dialog"
+                        title="Voir les projets de Quentin Querel"
+                        onClick={(e) => {
+                          const next = artistFocus === 'compositeur' ? null : 'compositeur'
+                          setArtistFocus(next)
+                          if (!next) { try { e.currentTarget.blur() } catch {} }
+                        }}
+                      >
+                        <span aria-hidden="true" className="pre-hub__credit-link-icon"></span>
+                        <span className="pre-hub__sr">Ouvrir les projets de Quentin Querel</span>
+                      </button>
+                    </div>
+                    {artistFocus === 'compositeur' && (
+                      <div className="pre-hub__credit-detail">
+                        <div className="pre-hub__credit-works">
+                          {artistData.compositeur.works.map((w) => (
+                            <button
+                              key={w.id}
+                              type="button"
+                              className="pre-hub__credit-workcard"
+                              onClick={() => { window.location.hash = '#/' }}
+                            >
+                              <div className="pre-hub__credit-thumb" aria-hidden="true"></div>
+                              <div className="pre-hub__credit-texts">
+                                <p className="pre-hub__credit-work">{w.title}</p>
+                                <p className="pre-hub__credit-role">{w.role}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <div className="pre-hub__credit-actions">
+                          <button type="button" className="pre-hub__credit-action pre-hub__credit-action--ghost">Contacter l'artiste</button>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                </ul>
+              </div>
+              <div className="pre-hub__credit-card">
+                <h3 className="pre-hub__credit-title">Comédiens Voix</h3>
+                <ul className="pre-hub__credit-list">
+                  {(voiceExpanded ? voiceData : voiceData.filter(v => v.featured)).map((v) => (
+                    <li key={v.id} className={`pre-hub__credit-item ${voiceFocus === v.id ? 'is-active' : ''}`}>
+                      <div className="pre-hub__credit-row">
+                        <span className="pre-hub__credit-nameplate">{v.name}{v.roleLabel ? ` — ${v.roleLabel}` : ''}</span>
+                        <button
+                          type="button"
+                          className={`pre-hub__credit-link ${voiceFocus === v.id ? 'is-active' : ''}`}
+                          aria-expanded={voiceFocus === v.id}
+                          aria-haspopup="dialog"
+                          title={`Voir les projets de ${v.name}`}
+                        onClick={(e) => {
+                          const next = voiceFocus === v.id ? null : v.id
+                          setVoiceFocus(next)
+                          if (!next) { try { e.currentTarget.blur() } catch {} }
+                        }}
+                      >
+                        <span aria-hidden="true" className="pre-hub__credit-link-icon"></span>
+                        <span className="pre-hub__sr">{`Ouvrir les projets de ${v.name}`}</span>
+                      </button>
+                    </div>
+                      {voiceFocus === v.id && (
+                        <div className="pre-hub__credit-detail">
+                          <div className="pre-hub__credit-works">
+                            {v.works.map((w) => (
+                              <button
+                                key={w.id}
+                                type="button"
+                                className="pre-hub__credit-workcard"
+                                onClick={() => { window.location.hash = '#/' }}
+                              >
+                                <div className="pre-hub__credit-thumb" aria-hidden="true"></div>
+                                <div className="pre-hub__credit-texts">
+                                  <p className="pre-hub__credit-work">{w.title}</p>
+                                  <p className="pre-hub__credit-role">{w.role}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                          <div className="pre-hub__credit-actions">
+                            <button type="button" className="pre-hub__credit-action pre-hub__credit-action--ghost">Contacter l'artiste</button>
+                          </div>
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  className="pre-hub__credit-expand"
+                  onClick={() => { setVoiceExpanded(v => !v); setVoiceFocus(null) }}
+                  aria-expanded={voiceExpanded}
+                >
+                  {voiceExpanded ? 'Voir moins' : 'Voir plus de comédiens'}
+                </button>
+              </div>
+            </div>
+          </section>
+
+            <section className="pre-hub__teaser">
+            <h2 className="pre-hub__subtitle">TEASER</h2>
+            <div className="pre-hub__video">
+              <iframe
+                src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                title="Teaser vidéo"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            </div>
+              <button
+                type="button"
+              className="pre-hub__cta"
+              onClick={() => {
+                try { window.scrollTo(0, 0) } catch {}
+                window.location.hash = '#/hub'
+              }}
+            >
+              Commencer la lecture
+            </button>
+            </section>
+          </div>
+        </div>
+      )
+    }
+
   // Render reader shell when on reader route
   if (isReaderRoute) {
     const id = (route.match(/^#\/?reader\/(.+)$/i) || [])[1] || '1'
@@ -602,7 +856,7 @@ export default function App() {
       {/* Quick actions on the right: Play, Bookmark */}
       {(!isReaderRoute) && (
         <Quickbar
-          visible={showFab && !showGate}
+          visible={showFab}
           showScrollTop={showScrollTop}
           baseUrl={baseUrl}
           onScrollTop={() => { try { window.scrollTo({ top: 0, behavior: 'smooth' }) } catch { window.scrollTo(0,0) } }}
@@ -760,16 +1014,6 @@ export default function App() {
           }}
         />
       )}
-      {showGate && createPortal(
-        <Gate
-          refEl={gateRef}
-          className={`gate ${gateState === 'starting' ? 'is-starting' : ''} ${(gateState === 'logo' || gateState === 'finishing') ? 'is-logo' : ''} ${gateState === 'finishing' ? 'is-finishing' : ''}`}
-          baseUrl={baseUrl}
-          onStart={startGate}
-        />,
-        document.body
-      )}
-
       {/* Deprecated FAB removed in favor of .quickbar */}
     </div>
   )
