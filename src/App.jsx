@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useRef, useState } from 'react'
 import ReaderShell from './reader/ReaderShell.jsx'
 import { getAudioEngine } from './reader/audioSingleton.js'
 import { getTales, getEntitlements } from './api/client.js'
@@ -23,53 +23,46 @@ export default function App() {
   const assetBase = (baseUrl || './').replace(/\/+$/, '')
   const wordmarkUrl = `${assetBase}/${encodeURIComponent('Sound Tales.svg')}`
   const heroImgUrl = 'https://static.wixstatic.com/media/b9ad46_9fcfea21c381472e97a9a9bc10386509~mv2.jpg'
-  const [artistFocus, setArtistFocus] = useState(null)
-  const [voiceFocus, setVoiceFocus] = useState(null)
   const [voiceExpanded, setVoiceExpanded] = useState(false)
-  const creditsRef = useRef(null)
+  const [showCreditsInline, setShowCreditsInline] = useState(false)
 
-  useEffect(() => {
-    const onDocClick = (e) => {
-      if (!artistFocus && !voiceFocus) return
-      const container = creditsRef.current
-      const insideCredits = container && container.contains(e.target)
-      if (insideCredits && e.target.closest('.pre-hub__credit-link')) {
-        // let the toggle handle its own state
-      } else if (!insideCredits || !e.target.closest('.pre-hub__credit-detail')) {
-        setArtistFocus(null)
-        setVoiceFocus(null)
-      }
-      try {
-        const activeEl = document.activeElement
-        if (activeEl && activeEl.classList?.contains('pre-hub__credit-link')) {
-          activeEl.blur()
-        }
-      } catch {}
-    }
-    document.addEventListener('mousedown', onDocClick, { capture: true })
-    return () => document.removeEventListener('mousedown', onDocClick, { capture: true })
-  }, [artistFocus, voiceFocus])
   const artistData = {
-    auteur: {
-      name: 'Johnny Delaveau',
-      title: 'Auteur principal',
-      works: [
-        { id: 'work-1', title: 'Le prix de la haine', role: 'Auteur principal' }
-      ]
-    },
-    compositeur: {
-      name: 'Quentin Querel',
-      title: 'Compositeur',
-      works: [
-        { id: 'work-1', title: 'Le prix de la haine', role: 'Compositeur principal' }
-      ]
-    }
+    auteurs: [
+      {
+        id: 'auteur-1',
+        name: 'Johnny Delaveau',
+        title: 'Auteur principal',
+        works: [
+          { id: 'work-1', title: 'Le prix de la haine', role: 'Auteur principal' }
+        ]
+      }
+    ],
+    compositeurs: [
+      {
+        id: 'comp-1',
+        name: 'Quentin Querel',
+        title: 'Compositeur principal',
+        works: [
+          { id: 'work-1', title: 'Le prix de la haine', role: 'Compositeur principal' }
+        ]
+      }
+    ],
+    illustrateurs: [
+      {
+        id: 'illu-1',
+        name: 'Dupont Dupond',
+        title: 'Illustrateur principal',
+        works: [
+          { id: 'work-1', title: 'Le prix de la haine', role: 'Illustration principale' }
+        ]
+      }
+    ]
   }
   const voiceData = [
     {
       id: 'voix-malone',
       name: 'Dupont Dupond',
-      title: 'Comédienne voix',
+      title: 'ComÃ©dienne voix',
       featured: true,
       roleLabel: 'Malone',
       works: [{ id: 'work-1', title: 'Le prix de la haine', role: 'Malone' }]
@@ -77,7 +70,7 @@ export default function App() {
     {
       id: 'voix-zadig',
       name: 'Dupont Dupond',
-      title: 'Comédien voix',
+      title: 'ComÃ©dien voix',
       featured: true,
       roleLabel: 'Zadig',
       works: [{ id: 'work-1', title: 'Le prix de la haine', role: 'Zadig' }]
@@ -85,7 +78,7 @@ export default function App() {
     {
       id: 'voix-zora',
       name: 'Dupont Dupond',
-      title: 'Comédienne voix',
+      title: 'ComÃ©dienne voix',
       featured: true,
       roleLabel: 'Zora',
       works: [{ id: 'work-1', title: 'Le prix de la haine', role: 'Zora' }]
@@ -93,7 +86,7 @@ export default function App() {
     {
       id: 'voix-albar',
       name: 'Dupont Dupond',
-      title: 'Comédien voix',
+      title: 'ComÃ©dien voix',
       featured: false,
       roleLabel: 'Albar',
       works: [{ id: 'work-1', title: 'Le prix de la haine', role: 'Albar' }]
@@ -101,7 +94,7 @@ export default function App() {
     {
       id: 'voix-evelyne',
       name: 'Dupont Dupond',
-      title: 'Comédienne voix',
+      title: 'ComÃ©dienne voix',
       featured: false,
       roleLabel: 'Evelyne',
       works: [{ id: 'work-1', title: 'Le prix de la haine', role: 'Evelyne' }]
@@ -109,7 +102,7 @@ export default function App() {
     {
       id: 'voix-elan',
       name: 'Dupont Dupond',
-      title: 'Comédien voix',
+      title: 'ComÃ©dien voix',
       featured: false,
       roleLabel: 'Elan',
       works: [{ id: 'work-1', title: 'Le prix de la haine', role: 'Elan' }]
@@ -144,6 +137,8 @@ export default function App() {
 
   // Simple hash-based routing to isolate the reader from the hub
   const [route, setRoute] = useState(() => window.location.hash || '#/')
+  const isReaderRoute = /^#\/?reader\//i.test(route)
+  const isHubRoute = /^#\/?hub/i.test(route)
   useEffect(() => {
     const onHash = () => setRoute(window.location.hash || '#/')
     window.addEventListener('hashchange', onHash)
@@ -169,8 +164,6 @@ export default function App() {
     load()
     return () => { alive = false }
   }, [baseUrl])
-  const isReaderRoute = /^#\/?reader\//i.test(route)
-  const isHubRoute = /^#\/?hub/i.test(route)
 
   useEffect(() => {
     try {
@@ -587,9 +580,10 @@ export default function App() {
       <div className="pre-hub" data-theme="osrase">
         <div className="pre-hub__inner">
           <section className="pre-hub__hero">
-            <div className="pre-hub__media">
-                  <div className="pre-hub__poster">
-                    <img
+            <div className="pre-hub__hero-grid">
+              <div className="pre-hub__media">
+                <div className="pre-hub__poster">
+                  <img
                     src={heroImgUrl}
                     alt="Illustration de l'univers Osrase"
                     loading="eager"
@@ -597,251 +591,192 @@ export default function App() {
                     width="640"
                     height="800"
                   />
+                </div>
+              </div>
+              <div className="pre-hub__hero-text">
+                <p className="pre-hub__lead">
+                  Deux frères en quête de vengeance sont propulsés dans la machinerie du pouvoir : l’un par le système, l’autre par la révolte. Rendez-vous au sommet.
+                </p>
+                <button
+                  type="button"
+                  className="pre-hub__cta pre-hub__cta--wide"
+                  onClick={() => { window.location.hash = '#/hub' }}
+                >
+                  Commencer la lecture
+                </button>
+                <div className="pre-hub__cta-row">
+                  <button
+                    type="button"
+                    className="pre-hub__cta-icon"
+                    aria-label="Bande-annonce"
+                    onClick={() => {
+                      try {
+                        const teaser = document.querySelector('.pre-hub__video iframe')
+                        if (teaser) teaser.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      } catch {}
+                    }}
+                  >
+                    🎬
+                  </button>
+                  <button
+                    type="button"
+                    className="pre-hub__cta-icon"
+                    aria-label="Marque-page"
+                    onClick={(e) => openBookmarksPanel(e, 'hero')}
+                  >
+                    🔖
+                  </button>
+                  <button
+                    type="button"
+                    className="pre-hub__cta-icon"
+                    aria-label="Crédits"
+                    onClick={() => {
+                      setShowCreditsInline(v => !v)
+                    }}
+                  >
+                    📜
+                  </button>
+                </div>
+                <div className="pre-hub__icon-row pre-hub__icon-row--desktop" aria-hidden="true">
+                  <div className="pre-hub__icon-chip">
+                    <div className="pre-hub__icon pre-hub__icon--book" data-icon="📖"></div>
+                    <span className="pre-hub__icon-label">26 chapitres</span>
+                  </div>
+                  <div className="pre-hub__icon-chip">
+                    <div className="pre-hub__icon pre-hub__icon--vinyl" data-icon="💿"></div>
+                    <span className="pre-hub__icon-label">8 thèmes</span>
+                  </div>
+                  <div className="pre-hub__icon-chip">
+                    <div className="pre-hub__icon pre-hub__icon--bubble" data-icon="💬"></div>
+                    <span className="pre-hub__icon-label">Dialogues</span>
+                  </div>
+                  <div className="pre-hub__icon-chip">
+                    <div className="pre-hub__icon pre-hub__icon--photo" data-icon="📷"></div>
+                    <span className="pre-hub__icon-label">20 illustrations</span>
                   </div>
                 </div>
-            <button
-              type="button"
-              className="pre-hub__cta"
-              onClick={() => { window.location.hash = '#/hub' }}
-            >
-              Commencer la lecture
-            </button>
-            <p className="pre-hub__lead">
-              Deux frères en quête de vengeance sont propulsés dans la machinerie du pouvoir : l’un par le système, l’autre par la révolte. Rendez-vous au sommet.
-            </p>
+                {showCreditsInline && (
+                  <div className="pre-hub__credits-inline">
+                    <div className="pre-hub__credits-grid">
+                      <div className="pre-hub__credit-stack">
+                        <h3 className="pre-hub__credit-head">Tale</h3>
+                        <ul className="pre-hub__credit-lines">
+                          {artistData.auteurs.map((p) => (
+                            <li key={p.id} className="pre-hub__credit-line">
+                              <span className="pre-hub__credit-name">{p.name}</span>
+                              <span className="pre-hub__credit-role">{p.title}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="pre-hub__credit-stack">
+                        <h3 className="pre-hub__credit-head">Sound</h3>
+                        <ul className="pre-hub__credit-lines">
+                          {artistData.compositeurs.map((p) => (
+                            <li key={p.id} className="pre-hub__credit-line">
+                              <span className="pre-hub__credit-name">{p.name}</span>
+                              <span className="pre-hub__credit-role">{p.title}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="pre-hub__credit-stack pre-hub__credit-stack--voice">
+                        <h3 className="pre-hub__credit-head">Comédiens voix</h3>
+                        <ul className="pre-hub__credit-lines">
+                          {voiceData.map((v) => (
+                            <li key={v.id} className="pre-hub__credit-line">
+                              <span className="pre-hub__credit-name">{v.name}</span>
+                              <span className="pre-hub__credit-role">{v.roleLabel}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </section>
 
           <section className="pre-hub__pillars" aria-label="Production originale">
             <p className="pre-hub__eyebrow pre-hub__eyebrow--small">PRODUCTION ORIGINALE</p>
-            <img
-              className="pre-hub__wordmark"
-              src={wordmarkUrl}
-              alt="Sound Tales"
-              loading="lazy"
-            />
-            <div className="pre-hub__grid">
-              <div className="pre-hub__pillar">
-                <div className="pre-hub__icon pre-hub__icon--book" aria-hidden="true" data-icon="✦"></div>
-                <div className="pre-hub__pillar-body">
-                  <h3 className="pre-hub__pillar-title">TALE</h3>
-                  <p className="pre-hub__pillar-meta"><em>20 chapitres</em></p>
-                  <p className="pre-hub__pillar-text">
-                    L'histoire de Malone et Zadig. Un roman fantastique d'anticipation qui saura vous captiver.
-                  </p>
-                </div>
-              </div>
-              <div className="pre-hub__pillar">
-                <div className="pre-hub__icon pre-hub__icon--vinyl" aria-hidden="true" data-icon="◎"></div>
-                <div className="pre-hub__pillar-body">
-                  <h3 className="pre-hub__pillar-title">SOUND</h3>
-                  <p className="pre-hub__pillar-meta"><em>20 thèmes</em></p>
-                  <p className="pre-hub__pillar-text">
-                    Dans chaque chapitre, un thème original vous accompagne. Laissez porter par l'ambiance.
-                  </p>
-                </div>
-              </div>
-              <div className="pre-hub__pillar">
-                <div className="pre-hub__icon pre-hub__icon--bubble" aria-hidden="true" data-icon="✺"></div>
-                <div className="pre-hub__pillar-body">
-                  <h3 className="pre-hub__pillar-title">DIALOGUE</h3>
-                  <p className="pre-hub__pillar-meta"><em>Interactifs</em></p>
-                  <p className="pre-hub__pillar-text">
-                    Cliquez sur les dialogues pour écouter les personnages vivre la scène.
-                  </p>
-                </div>
-              </div>
-              <div className="pre-hub__pillar">
-                <div className="pre-hub__icon pre-hub__icon--photo" aria-hidden="true" data-icon="▣"></div>
-                <div className="pre-hub__pillar-body">
-                  <h3 className="pre-hub__pillar-title">PHOTOGRAPHIE</h3>
-                  <p className="pre-hub__pillar-meta"><em>20 illustrations</em></p>
-                  <p className="pre-hub__pillar-text">
-                    Une vue d'artiste indépendante vous est proposée à la fin de chaque chapitre.
-                  </p>
-                </div>
-              </div>
+            <div className="pre-hub__brandline">
+              <img
+                className="pre-hub__wordmark"
+                src={wordmarkUrl}
+                alt="Sound Tales"
+                loading="lazy"
+              />
             </div>
-            <div className="pre-hub__logo-mobile" aria-hidden="true"></div>
-          </section>
-
-          <section className="pre-hub__credits-section" aria-label="Artistes" ref={creditsRef}>
-            <div className="pre-hub__credits-grid">
-              <div className="pre-hub__credit-card">
-                <h3 className="pre-hub__credit-title">Création</h3>
-                <ul className="pre-hub__credit-list">
-                  <li className={`pre-hub__credit-item ${artistFocus === 'auteur' ? 'is-active' : ''}`}>
-                    <div className="pre-hub__credit-row">
-                      <span className="pre-hub__credit-nameplate"><strong>Auteur</strong> — Johnny Delaveau</span>
-                      <button
-                        type="button"
-                        className={`pre-hub__credit-link ${artistFocus === 'auteur' ? 'is-active' : ''}`}
-                        aria-expanded={artistFocus === 'auteur'}
-                        aria-haspopup="dialog"
-                        title="Voir les projets de Johnny Delaveau"
-                        onClick={(e) => {
-                          const next = artistFocus === 'auteur' ? null : 'auteur'
-                          setArtistFocus(next)
-                          if (!next) { try { e.currentTarget.blur() } catch {} }
+            <div className="pre-hub__swipe" aria-label="Parcourir l'univers">
+              <div className="pre-hub__pane pre-hub__pane--chapters">
+                <div className="pre-hub__chapter-grid" aria-busy={loadingTales}>
+                  {(() => {
+                    const raw = loadingTales ? Array.from({ length: 26 }) : (tales?.[0]?.chapters || [])
+                    const base = Array.isArray(raw) ? [...raw] : []
+                    const desired = 26
+                    if (!loadingTales && base.length < desired) {
+                      for (let i = base.length; i < desired; i += 1) {
+                        base.push({ id: `placeholder-${i + 1}`, title: `Chapitre ${i + 1}` })
+                      }
+                    }
+                    return base.slice(0, desired)
+                  })().map((ch, idx) => {
+                    const chapterId = String(ch?.id || idx + 1)
+                    const tale = tales?.[0]
+                    const taleId = tale?.id || 'tale1'
+                    const unlocked = !!(ents?.tales?.[taleId] || ents?.chapters?.[`${taleId}:${chapterId}`])
+                    const label = ch?.title || `Chapitre ${chapterId}`
+                    const img = loadingTales ? null : (tale?.cover || `https://picsum.photos/800/450?random=${chapterId}`)
+                    return (
+                      <article
+                        key={chapterId}
+                        className={`pre-hub__chapter-card ${loadingTales ? 'is-loading' : ''}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          if (loadingTales) return
+                          try { getAudioEngine().ensureStarted() } catch {}
+                          const payload = { id: chapterId, img, title: tale?.title || 'OSRASE' }
+                          try { sessionStorage.setItem('reader:splash', JSON.stringify(payload)) } catch {}
+                          window.location.hash = `#/reader/${chapterId}`
+                        }}
+                        onKeyDown={(e) => {
+                          if (loadingTales) return
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            try { getAudioEngine().ensureStarted() } catch {}
+                            const payload = { id: chapterId, img, title: tale?.title || 'OSRASE' }
+                            try { sessionStorage.setItem('reader:splash', JSON.stringify(payload)) } catch {}
+                            window.location.hash = `#/reader/${chapterId}`
+                          }
                         }}
                       >
-                        <span aria-hidden="true" className="pre-hub__credit-link-icon"></span>
-                        <span className="pre-hub__sr">Ouvrir les projets de Johnny Delaveau</span>
-                      </button>
-                    </div>
-                    {artistFocus === 'auteur' && (
-                      <div className="pre-hub__credit-detail">
-                        <div className="pre-hub__credit-works">
-                          {artistData.auteur.works.map((w) => (
-                            <button
-                              key={w.id}
-                              type="button"
-                              className="pre-hub__credit-workcard"
-                              onClick={() => { window.location.hash = '#/' }}
-                            >
-                              <div className="pre-hub__credit-thumb" aria-hidden="true"></div>
-                              <div className="pre-hub__credit-texts">
-                                <p className="pre-hub__credit-work">{w.title}</p>
-                                <p className="pre-hub__credit-role">{w.role}</p>
-                              </div>
-                            </button>
-                          ))}
+                        <div
+                          className="pre-hub__chapter-thumb"
+                          style={img ? { backgroundImage: `url('${img}')` } : {}}
+                          aria-hidden="true"
+                        >
+                          {!loadingTales && <span className="pre-hub__chapter-badge">{unlocked ? chapterId : '?'}</span>}
                         </div>
-                        <div className="pre-hub__credit-actions">
-                          <button type="button" className="pre-hub__credit-action pre-hub__credit-action--ghost">Contacter l'artiste</button>
+                        <div className="pre-hub__chapter-texts">
+                          <p className="pre-hub__chapter-title">{`${chapterId}. ${label}`}</p>
+                          {!loadingTales && (
+                            <span className="pre-hub__chapter-meta">~5 min • OSRASE</span>
+                          )}
                         </div>
-                      </div>
-                    )}
-                  </li>
-                  <li className={`pre-hub__credit-item ${artistFocus === 'compositeur' ? 'is-active' : ''}`}>
-                    <div className="pre-hub__credit-row">
-                      <span className="pre-hub__credit-nameplate"><strong>Compositeur</strong> — Quentin Querel</span>
-                      <button
-                        type="button"
-                        className={`pre-hub__credit-link ${artistFocus === 'compositeur' ? 'is-active' : ''}`}
-                        aria-expanded={artistFocus === 'compositeur'}
-                        aria-haspopup="dialog"
-                        title="Voir les projets de Quentin Querel"
-                        onClick={(e) => {
-                          const next = artistFocus === 'compositeur' ? null : 'compositeur'
-                          setArtistFocus(next)
-                          if (!next) { try { e.currentTarget.blur() } catch {} }
-                        }}
-                      >
-                        <span aria-hidden="true" className="pre-hub__credit-link-icon"></span>
-                        <span className="pre-hub__sr">Ouvrir les projets de Quentin Querel</span>
-                      </button>
-                    </div>
-                    {artistFocus === 'compositeur' && (
-                      <div className="pre-hub__credit-detail">
-                        <div className="pre-hub__credit-works">
-                          {artistData.compositeur.works.map((w) => (
-                            <button
-                              key={w.id}
-                              type="button"
-                              className="pre-hub__credit-workcard"
-                              onClick={() => { window.location.hash = '#/' }}
-                            >
-                              <div className="pre-hub__credit-thumb" aria-hidden="true"></div>
-                              <div className="pre-hub__credit-texts">
-                                <p className="pre-hub__credit-work">{w.title}</p>
-                                <p className="pre-hub__credit-role">{w.role}</p>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                        <div className="pre-hub__credit-actions">
-                          <button type="button" className="pre-hub__credit-action pre-hub__credit-action--ghost">Contacter l'artiste</button>
-                        </div>
-                      </div>
-                    )}
-                  </li>
-                </ul>
-              </div>
-              <div className="pre-hub__credit-card">
-                <h3 className="pre-hub__credit-title">Comédiens Voix</h3>
-                <ul className="pre-hub__credit-list">
-                  {(voiceExpanded ? voiceData : voiceData.filter(v => v.featured)).map((v) => (
-                    <li key={v.id} className={`pre-hub__credit-item ${voiceFocus === v.id ? 'is-active' : ''}`}>
-                      <div className="pre-hub__credit-row">
-                        <span className="pre-hub__credit-nameplate">{v.name}{v.roleLabel ? ` — ${v.roleLabel}` : ''}</span>
-                        <button
-                          type="button"
-                          className={`pre-hub__credit-link ${voiceFocus === v.id ? 'is-active' : ''}`}
-                          aria-expanded={voiceFocus === v.id}
-                          aria-haspopup="dialog"
-                          title={`Voir les projets de ${v.name}`}
-                        onClick={(e) => {
-                          const next = voiceFocus === v.id ? null : v.id
-                          setVoiceFocus(next)
-                          if (!next) { try { e.currentTarget.blur() } catch {} }
-                        }}
-                      >
-                        <span aria-hidden="true" className="pre-hub__credit-link-icon"></span>
-                        <span className="pre-hub__sr">{`Ouvrir les projets de ${v.name}`}</span>
-                      </button>
-                    </div>
-                      {voiceFocus === v.id && (
-                        <div className="pre-hub__credit-detail">
-                          <div className="pre-hub__credit-works">
-                            {v.works.map((w) => (
-                              <button
-                                key={w.id}
-                                type="button"
-                                className="pre-hub__credit-workcard"
-                                onClick={() => { window.location.hash = '#/' }}
-                              >
-                                <div className="pre-hub__credit-thumb" aria-hidden="true"></div>
-                                <div className="pre-hub__credit-texts">
-                                  <p className="pre-hub__credit-work">{w.title}</p>
-                                  <p className="pre-hub__credit-role">{w.role}</p>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                          <div className="pre-hub__credit-actions">
-                            <button type="button" className="pre-hub__credit-action pre-hub__credit-action--ghost">Contacter l'artiste</button>
-                          </div>
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  type="button"
-                  className="pre-hub__credit-expand"
-                  onClick={() => { setVoiceExpanded(v => !v); setVoiceFocus(null) }}
-                  aria-expanded={voiceExpanded}
-                >
-                  {voiceExpanded ? 'Voir moins' : 'Voir plus de comédiens'}
-                </button>
+                        {!loadingTales && (
+                          <p className="pre-hub__chapter-desc">Résumé à venir.</p>
+                        )}
+                      </article>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           </section>
-
-            <section className="pre-hub__teaser">
-            <h2 className="pre-hub__subtitle">TEASER</h2>
-            <div className="pre-hub__video">
-              <iframe
-                src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                title="Teaser vidéo"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
-            </div>
-              <button
-                type="button"
-              className="pre-hub__cta"
-              onClick={() => {
-                try { window.scrollTo(0, 0) } catch {}
-                window.location.hash = '#/hub'
-              }}
-            >
-              Commencer la lecture
-            </button>
-            </section>
-          </div>
         </div>
+      </div>
       )
     }
 
@@ -988,7 +923,7 @@ export default function App() {
                 style={{ backgroundImage: `url('${img}')` }}
               >
                 <div className="card__overlay"></div>
-                <span className="card__badge">{unlocked ? chapterId : '🔒'}</span>
+                <span className="card__badge">{unlocked ? chapterId : 'ðŸ”’'}</span>
               </div>
             </article>
           )
