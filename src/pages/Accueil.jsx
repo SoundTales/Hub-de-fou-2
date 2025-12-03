@@ -61,11 +61,26 @@ export default function Accueil() {
 					</p>
 					<div className="accueil__cta-row stagger-item delay-4">
 						<Link to="/hub" className="accueil__cta">
-							Découvrir le catalogue
+							Lire votre premier Tale
 						</Link>
 						<Link to="/creer-tale" className="accueil__cta accueil__cta--ghost">
 							Créer un Tale
 						</Link>
+					</div>
+					
+					<div className="accueil__stats stagger-item delay-4">
+						<div className="accueil__stat">
+							<p className="accueil__stat-value">Reprenez votre Tale</p>
+							<p className="accueil__stat-note">Sur tous vos appareils</p>
+						</div>
+						<div className="accueil__stat">
+							<p className="accueil__stat-value">Mode jour & nuit</p>
+							<p className="accueil__stat-note">Affichage personnalisé</p>
+						</div>
+						<div className="accueil__stat">
+							<p className="accueil__stat-value">Composition & Sound Design</p>
+							<p className="accueil__stat-note">synchronisés à votre lecture</p>
+						</div>
 					</div>
 				</div>
 

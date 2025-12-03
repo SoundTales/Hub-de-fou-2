@@ -1601,9 +1601,12 @@ a {
 }
 
 .accueil__stat-note {
-  font-size: 0.8rem;
-  opacity: 0.6;
-  margin: 0;
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-top: 6px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
 }
 
 /* HERO CARD (Visuel droite) */
@@ -2342,7 +2345,7 @@ a {
   color: rgba(255, 255, 255, 0.4);
 }
 
-@media (max-width: 768px) {
+@media (max-width:  768px) {
   .app-footer {
     padding: 48px 20px 24px;
   }
