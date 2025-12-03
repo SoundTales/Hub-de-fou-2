@@ -1,45 +1,37 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-
-const HERO_STATS = [
-	{
-		label: 'Histoire',
-		value: "d’auteurs",
-		note: 'Des romans courts écrits pour le format Tale.'
-	},
-	{
-		label: 'Composition',
-		value: 'musicale',
-		note: 'Des thèmes originaux pensés pour accompagner la lecture.'
-	},
-	{
-		label: 'Dialogues',
-		value: 'joués',
-		note: 'Des comédiens voix interprètent les scènes, pas un simple livre audio.'
-	},
-	{
-		label: 'Illustrations',
-		value: 'de chapitres',
-		note: 'Des visuels pour marquer les moments clés de l’histoire.'
-	},
-	{
-		label: 'Sound design',
-		value: "d’ambiance",
-		note: 'Des bruitages qui installent le lieu, l’époque et la tension.'
-	}
-]
 
 const FEATURES = [
 	{
-		title: 'Format Série',
-		text: 'Des chapitres courts de 10 à 15 minutes, calibrés pour s’insérer dans votre quotidien comme un épisode de série TV. Une lecture rythmée qui ne vous demande pas des heures de disponibilité.'
+		icon: (
+			<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+				<path d="M18 8a2 2 0 0 0 0-4 2 2 0 0 0-4 0 2 2 0 0 0-4 0 2 2 0 0 0-4 0 2 2 0 0 0 0 4" />
+				<path d="M10 22 9 8" />
+				<path d="M14 22 15 8" />
+				<path d="M20 8 18 22H6L4 8h16Z" />
+			</svg>
+		),
+		title: 'Des histoires qui se dévorent',
+		text: 'Les Tales sont centrés sur des dialogues et des personnages forts. Des histoires courtes et denses, sans temps mort. Vous aviez dit « juste un chapitre » ?'
 	},
 	{
-		title: 'Immersion Totale',
-		text: 'Chaque scène est portée par une composition originale, des bruitages d’ambiance et des voix jouées par des comédiens. Vous ne lisez plus seulement, vous êtes au cœur de l’action.'
+		icon: (
+			<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+				<path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+				<path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+			</svg>
+		),
+		title: 'Vous êtes au cœur de la scène',
+		text: 'Le thème musical, le sound design et les voix de comédiens soulignent les émotions. Les silences, la tension, pour que chaque scène prenne une dimension immersive.'
 	},
 	{
-		title: 'Lecture Hybride',
-		text: 'Commencez votre lecture dans le métro, basculez en audio pour la marche, reprenez le texte le soir. Le Tale s’adapte à votre moment sans jamais perdre le fil de l’histoire.'
+		icon: (
+			<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+				<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+			</svg>
+		),
+		title: 'Votre nouveau rituel du soir',
+		text: 'Casque sur les oreilles, lumière plus douce en mode nuit, le temps d’un ou deux chapitres. Notre liseuse est conçue pour améliorer le confort de votre lecture.'
 	}
 ]
 
@@ -48,18 +40,24 @@ const handlePlaceholderSubmit = (event) => {
 }
 
 export default function Accueil() {
+	const [expandCard1, setExpandCard1] = useState(false)
+	const [expandCard2, setExpandCard2] = useState(false)
+
 	return (
 		<div className="page accueil-page">
 			<section className="accueil__hero">
 				<div className="accueil__hero-texts">
 					<p className="accueil__eyebrow stagger-item delay-1">Original Audio Series</p>
 					<h1 className="accueil__title stagger-item delay-2">
-						<span>Écoutez</span>
-						<span style={{ color: '#ffff80' }}>L'Invisible</span>
+						<span style={{ color: '#ffff80' }}>Les Tales</span>
+						<span>
+							Les histoires, en plus <span style={{ color: '#ffff80' }}>intense.</span>
+						</span>
 					</h1>
 					<p className="accueil__lede stagger-item delay-3">
-						Plongez dans une nouvelle dimension narrative. Sound Tales combine écriture immersive, design sonore spatial
-						et performances vocales pour créer des films pour vos oreilles.
+						Un Tale, c’est une histoire pensée pour l’immersion : forte, centrée sur les personnages et les dialogues. La musique, le sound design, les illustrations et les dialogues interprétés par des comédiens accompagnent votre imaginaire et amplifient chaque émotion.
+						<br /><br />
+						La mise en scène vous place au cœur de l’histoire, sans jamais vous retirer le plaisir de la lecture.
 					</p>
 					<div className="accueil__cta-row stagger-item delay-4">
 						<Link to="/hub" className="accueil__cta">
@@ -69,33 +67,23 @@ export default function Accueil() {
 							Créer un Tale
 						</Link>
 					</div>
-					
-					<div className="accueil__stats stagger-item delay-4">
-						<div className="accueil__stat">
-							<div className="accueil__stat-label">Immersion</div>
-							<p className="accueil__stat-value">3D Audio</p>
-							<p className="accueil__stat-note">Binaural natif</p>
-						</div>
-						<div className="accueil__stat">
-							<div className="accueil__stat-label">Catalogue</div>
-							<p className="accueil__stat-value">12+ Séries</p>
-							<p className="accueil__stat-note">Mises à jour hebdo</p>
-						</div>
-					</div>
 				</div>
 
 				<div className="accueil__hero-visual stagger-item delay-3">
 					<div className="accueil__hero-card">
-						<h2 className="accueil__hero-card__title">Studio & plateforme</h2>
+						<h2 className="accueil__hero-card__title">
+							Un studio d’histoires<br />
+							Une plateforme de création
+						</h2>
 						<p className="accueil__hero-card__text">
-							Nous produisons les premiers Tales en interne pour financer la technologie de Liseuse, attirer les lecteurs et ouvrir la porte
-							aux prochains auteurs. Chaque projet associe manuscrit, direction artistique et post-production audio.
+							Sound Tales, c’est la rencontre d’un auteur et d’un compositeur qui ont choisi de fabriquer des histoires autrement. Notre premier Tale, « Le Prix de la haine », a été entièrement imaginé, créé, produit, édité et diffusé par nos soins, de la première lettre à la dernière note.
 						</p>
-						<ul className="accueil__hero-card__list">
-							<li>Du manuscrit au Tale prêt à être lu et écouté.</li>
-							<li>Une équipe artistique sur mesure pour chaque projet.</li>
-							<li>Une Liseuse pensée pour la lecture immersive.</li>
-						</ul>
+						<p className="accueil__hero-card__text">
+							Notre métier : accueillir des histoires et leur donner une forme immersive, aux côtés des artistes qui les écrivent, les jouent, les composent et les illustrent. Tale après Tale, ce sont de nouvelles voix, de nouveaux univers et de nouveaux talents qui prennent vie.
+						</p>
+						<p className="accueil__hero-card__text" style={{ marginBottom: 0, fontWeight: 700, color: '#ffff80' }}>
+							En découvrant un Tale, vous ne faites pas que lire et écouter une histoire : vous participez à la création des prochaines.
+						</p>
 					</div>
 				</div>
 			</section>
@@ -108,11 +96,97 @@ export default function Accueil() {
 				<div className="accueil__features-grid">
 					{FEATURES.map((feature, index) => (
 						<article key={index} className="accueil__feature-card">
-							<div className="accueil__feature-number">0{index + 1}</div>
+							<div className="accueil__feature-number">{feature.icon}</div>
 							<h3>{feature.title}</h3>
 							<p>{feature.text}</p>
 						</article>
 					))}
+				</div>
+			</section>
+
+			<section className="premium-section">
+				<div className="premium-grid">
+					{/* Rubrique 1 */}
+					<article className="premium-card">
+						<header className="premium-card__header">
+							<h2 className="premium-card__title">
+								<span>Lire comme un roman</span>
+								<span className="highlight">Le vivre comme un film</span>
+							</h2>
+						</header>
+
+						{/* Listes déplacées ici pour être visibles tout de suite */}
+						<div className="premium-card__lists-container">
+							<h3 className="premium-card__subtitle">Ce qui change par rapport à un livre classique :</h3>
+							<ul className="premium-card__list">
+								<li>un roman centré sur les personnages et les dialogues, pensé pour l’émotion</li>
+								<li>des thèmes musicaux qui suivent les scènes, sans prendre le dessus sur le texte</li>
+								<li>un sound design discret qui installe les lieux, les ambiances, la tension</li>
+								<li>des voix de comédiens qui donnent du relief aux échanges.</li>
+							</ul>
+						</div>
+
+						<button 
+							className="premium-card__toggle-btn"
+							onClick={() => setExpandCard1(!expandCard1)}
+						>
+							{expandCard1 ? 'Réduire' : 'Lire le contexte'}
+						</button>
+
+						<div className={`premium-card__content premium-card__hidden-content ${expandCard1 ? 'expanded' : ''}`}>
+							<p>
+								Vous aimez les histoires qui vous happent, celles qui laissent des scènes et des répliques en tête longtemps après coup. C’est là que les Tales prennent leur source.
+							</p>
+							<p>
+								Un Tale, c’est un texte écrit comme un roman, avec des personnages travaillés, des dialogues importants et une vraie progression d’histoire. Mais chaque chapitre est accompagné de musique, de sound design et de voix de comédiens, pour que vous puissiez plonger facilement dans l’histoire et rester dedans sans effort.
+							</p>
+							<p>
+								Que vous ayez l’habitude d'enchaîner les livres ou que vos soirées soient plutôt mangées par les écrans et la fatigue, un Tale est pensé pour trouver sa place dans votre quotidien : pour vous donner un repère, la durée d’un Tale est proche d’un ou deux films, le temps de vous installer, casque sur les oreilles, et de vous garder dans votre propre bulle d’imaginaire.
+							</p>
+							<p className="premium-card__footer">Vous lisez à votre rythme, partout.</p>
+						</div>
+					</article>
+
+					{/* Rubrique 2 */}
+					<article className="premium-card premium-card--alt">
+						<header className="premium-card__header">
+							<h2 className="premium-card__title">
+								<span>Vous êtes en avance.</span>
+								<span className="highlight">Tant mieux pour nous.</span>
+							</h2>
+						</header>
+
+						{/* Listes déplacées ici */}
+						<div className="premium-card__lists-container">
+							<h3 className="premium-card__subtitle">Quand vous achetez un Tale aujourd’hui, vous ne faites pas qu’essayer quelque chose de différent :</h3>
+							<ul className="premium-card__list">
+								<li>vous rejoignez les premiers soutiens d’un format en lancement, ceux qui l’accompagnent dès ses débuts</li>
+								<li>vous contribuez à rendre possibles les prochains Tales : écriture, composition, enregistrement des comédiens, direction artistique</li>
+								<li>vous participez à faire exister une création portée par des artistes, plutôt qu’une ligne de plus dans une offre impersonnelle.</li>
+							</ul>
+						</div>
+
+						<button 
+							className="premium-card__toggle-btn"
+							onClick={() => setExpandCard2(!expandCard2)}
+						>
+							{expandCard2 ? 'Réduire' : 'Lire le contexte'}
+						</button>
+
+						<div className={`premium-card__content premium-card__hidden-content ${expandCard2 ? 'expanded' : ''}`}>
+							<p>
+								Si vous tombez sur Sound Tales maintenant, c’est que vous avez sans doute un goût pour les projets encore confidentiels, ceux qu’on découvre avant qu’ils ne circulent partout.
+							</p>
+							<p>
+								Sound Tales, c’est un nouveau médium de lecture porté par un auteur et un compositeur, avec un premier Tale produit en équipe réduite. Un format qui se construit en dehors des grandes plateformes, pas comme un catalogue de plus, mais comme un projet indépendant qui cherche ses premiers lecteurs.
+							</p>
+
+							<p className="premium-card__footer">
+								Vous profitez d’un format encore rare,<br />
+								et vous devenez une des personnes grâce à qui l’aventure peut continuer.
+							</p>
+						</div>
+					</article>
 				</div>
 			</section>
 
