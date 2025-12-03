@@ -2,12 +2,13 @@ import { Link } from 'react-router-dom'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
+  const logoSrc = `${import.meta.env.BASE_URL}logo.svg`
 
   return (
     <footer className="app-footer">
       <div className="app-footer__content">
         <div className="app-footer__brand">
-          <img src="/logo.svg" alt="Sound Tales" className="app-footer__logo" />
+          <img src={logoSrc} alt="Sound Tales" className="app-footer__logo" />
           <p className="app-footer__tagline">
             Lisez, écoutez, vivez l'histoire.
             <br />

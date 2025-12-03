@@ -9,6 +9,7 @@ export default function MainLayout() {
   const [isAtTop, setIsAtTop] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
+  const logoSrc = `${import.meta.env.BASE_URL}logo.svg`
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -119,7 +120,7 @@ export default function MainLayout() {
         </button>
         
         <NavLink to="/" className="app-logo" aria-label="Retour à l'accueil" onClick={closeMobileMenu}>
-          <img src="/logo.svg" alt="" loading="lazy" />
+          <img src={logoSrc} alt="" loading="lazy" />
         </NavLink>
 
         {/* Navigation Desktop (cachée sur mobile via CSS) */}
