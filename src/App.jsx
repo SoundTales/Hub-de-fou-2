@@ -1,40 +1,27 @@
-import { useEffect } from 'react'
-import { Route, Routes, Navigate, useLocation } from 'react-router-dom'
-import MainLayout from './components/layout/MainLayout.jsx'
-import Accueil from './pages/Accueil.jsx'
-import Hub from './pages/Hub.jsx'
-import Liseuse from './pages/Liseuse.jsx'
-import CreerTale from './pages/CreerTale.jsx'
+import { Routes, Route } from 'react-router-dom';
+import Accueil from './pages/Accueil';
+import Hub from './pages/Hub';
+import TaleLanding from './pages/TaleLanding';
+import Liseuse from './pages/Liseuse';
+import CreerTale from './pages/CreerTale';
+import MainLayout from './components/layout/MainLayout';
 
-// Composant utilitaire pour remonter en haut de page à chaque changement de route
-function ScrollToTop() {
-  const { pathname } = useLocation()
-
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [pathname])
-
-  return null
-}
-
-export default function App() {
+function App() {
   return (
-    <>
-      <ScrollToTop />
-      <Routes>
-        {/* Route Layout : Pour toutes les pages "marketing" et navigation */}
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<Accueil />} />
-          <Route path="/hub" element={<Hub />} />
-          <Route path="/creer-tale" element={<CreerTale />} />
-        </Route>
-
-        {/* Route Standalone : La liseuse vit sa propre vie sans le header/footer du site */}
-        <Route path="/liseuse" element={<Liseuse />} />
-
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </>
-  )
+    <Routes>
+      <Route element={<MainLayout />}>
+        <Route path="/" element={<Accueil />} />
+        <Route path="/hub" element={<Hub />} />
+        <Route path="/creer-tale" element={<CreerTale />} />
+        
+        {/* Nouvelle route pour la page de présentation du Tale (Ton ancien Hub) */}
+        <Route path="/tale/:taleId" element={<TaleLanding />} />
+      </Route>
+      
+      {/* La liseuse reste en dehors du layout principal si tu veux le plein écran */}
+      <Route path="/lecture/:taleId/:chapterId" element={<Liseuse />} />
+    </Routes>
+  );
 }
+
+export default App;

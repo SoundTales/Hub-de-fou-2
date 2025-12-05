@@ -1,49 +1,203 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { useParams, Link } from 'react-router-dom' // Import Link pour le bouton retour
+import { getChapterUrl } from '../data/talesRegistry'
+
+// --- Composant ScrollTriggerBlock (Inchangé) ---
+const ScrollTriggerBlock = ({ onVisible, children }) => {
+  const elementRef = useRef(null)
+  const [hasTriggered, setHasTriggered] = useState(false)
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting && !hasTriggered) { onVisible(); setHasTriggered(true) }
+      }, { threshold: 0.5 })
+    if (elementRef.current) observer.observe(elementRef.current)
+    return () => observer.disconnect()
+  }, [hasTriggered, onVisible])
+  return <div ref={elementRef}>{children}</div>
+}
 
 export default function Liseuse() {
-  const [content, setContent] = useState('')
-  const [status, setStatus] = useState('Chargement…')
+  const { taleId, chapterId } = useParams() // <--- C'est ici que la magie opère
+  const [chapterData, setChapterData] = useState(null)
+  const [hasStarted, setHasStarted] = useState(false)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    fetch('/mock/chapters/tale1/1.json')
-      .then((response) => response.json())
-      .then((data) => {
-        setContent(JSON.stringify(data, null, 2))
-        setStatus('JSON chargé, modifiable localement')
-      })
-      .catch(() => setStatus('Erreur lors du chargement'))
-  }, [])
+    const jsonUrl = getChapterUrl(taleId, chapterId)
 
-  const handleFormat = () => {
-    try {
-      const parsed = JSON.parse(content)
-      setContent(JSON.stringify(parsed, null, 2))
-      setStatus('JSON valide reformatté')
-    } catch {
-      setStatus('JSON invalide, vérifiez la syntaxe')
+    if (!jsonUrl) {
+      setError("Chapitre introuvable.")
+      return
     }
+
+    fetch(jsonUrl)
+      .then((res) => { if (!res.ok) throw new Error("Erreur réseau"); return res.json() })
+      .then((data) => setChapterData(data))
+      .catch((err) => setError("Impossible de charger le chapitre."))
+  }, [taleId, chapterId])
+
+  // --- Helpers pour la structure Optimisée ---
+
+  // Récupère les infos du personnage (Nom, Couleur) depuis les métadonnées
+  const getCharacter = (charId) => {
+    if (!chapterData?.meta?.characters) return { name: charId, color: '#fff' }
+    return chapterData.meta.characters[charId] || { name: charId, color: '#fff' }
   }
 
-  return (
-    <section className="page-section liseuse">
-      <h1>Liseuse</h1>
-      <p>
-        Le fichier est chargé depuis <code>/mock/chapters/tale1/1.json</code>. Les modifications restent locales pour le
-        moment.
-      </p>
-      <textarea
-        className="liseuse-editor"
-        value={content}
-        onChange={(event) => setContent(event.target.value)}
-        rows={20}
-        spellCheck={false}
-      />
-      <div className="liseuse-actions">
-        <button type="button" className="link-btn" onClick={handleFormat}>
-          Reformater le JSON
+  // Construit le chemin complet pour l'audio (Music, SFX, Voice)
+  const getAudioPath = (type, filenameOrId) => {
+    if (!chapterData?.meta?.basePaths) return filenameOrId // Fallback ancienne structure
+
+    const base = chapterData.meta.basePaths
+    
+    if (type === 'voice') {
+      return base.voices + filenameOrId
+    }
+    
+    // Pour Music et SFX, on doit d'abord trouver le nom de fichier dans le registre
+    if (type === 'music') {
+      const filename = chapterData.audioRegistry.tracks[filenameOrId]
+      return base.music + filename
+    }
+    
+    if (type === 'sfx') {
+      const filename = chapterData.audioRegistry.sfx[filenameOrId]
+      return base.sfx + filename
+    }
+
+    return filenameOrId
+  }
+
+  // --- Actions ---
+
+  const handleStartChapter = () => {
+    console.log("🔊 Audio Context Unlocked")
+    setHasStarted(true)
+  }
+
+  const playVoice = (charName, path) => {
+    console.log(`🗣️ VOIX [${charName}]: ${path}`)
+    // Ici: new Audio(path).play()
+  }
+
+  const triggerSfx = (sfxId) => {
+    const path = getAudioPath('sfx', sfxId)
+    console.log(`💥 SFX: ${path}`)
+    // Ici: new Audio(path).play()
+  }
+
+  const triggerMusic = (action, trackId) => {
+    const path = getAudioPath('music', trackId)
+    console.log(`🎵 MUSIC [${action}]: ${path}`)
+    // Ici: Gestion du player musique (fade in/out)
+  }
+
+  const saveCheckpoint = (id) => {
+    console.log(`💾 Checkpoint: ${id}`)
+  }
+
+  // --- Rendu ---
+
+  if (error) return <div className="liseuse-error">{error} <br/><Link to="/" style={{color:'white'}}>Retour au Hub</Link></div>
+  if (!chapterData) return <div className="liseuse-loading">Chargement...</div>
+
+  // Écran de démarrage
+  if (!hasStarted) {
+    return (
+      <div className="start-screen">
+        <div className="cover-container">
+          <img 
+            src={chapterData.meta.coverImage || "https://placehold.co/400x600/1a1a1a/white?text=No+Cover"} 
+            alt="Cover" 
+            className="cover-image"
+          />
+        </div>
+        <h1 className="chapter-title">{chapterData.meta.title}</h1>
+        <button className="start-btn" onClick={handleStartChapter}>
+          COMMENCER LA LECTURE
         </button>
-        <span className="liseuse-status">{status}</span>
+        <style>{`
+          .start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background-color: #0a0a0a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+          .cover-container { width: 100%; max-width: 300px; aspect-ratio: 2/3; margin-bottom: 2rem; box-shadow: 0 0 30px rgba(0,0,0,0.8); overflow: hidden; border-radius: 8px; }
+          .cover-image { width: 100%; height: 100%; object-fit: cover; }
+          .chapter-title { color: white; text-align: center; margin-bottom: 2rem; font-size: 1.5rem; }
+          .start-btn { background: #00d2ff; color: #000; border: none; padding: 1rem 2rem; font-size: 1.2rem; font-weight: bold; border-radius: 50px; cursor: pointer; text-transform: uppercase; transition: transform 0.2s; }
+          .start-btn:hover { transform: scale(1.05); background: #fff; }
+        `}</style>
       </div>
-    </section>
+    )
+  }
+
+  // Contenu du chapitre
+  return (
+    <div className="liseuse-container">
+      <div className="liseuse-content">
+        {chapterData.blocks.map((block, index) => {
+          switch (block.type) {
+            
+            case 'text':
+              return <p key={index} className="block-text">{block.content}</p>
+
+            case 'dialogue':
+              // Gestion optimisée avec charId et couleurs
+              const charInfo = getCharacter(block.charId || block.character) // Fallback si ancien JSON
+              const voicePath = getAudioPath('voice', block.voiceFile || block.audioSrc)
+              
+              return (
+                <div 
+                  key={index} 
+                  className="block-dialogue"
+                  style={{ borderLeftColor: charInfo.color }}
+                  onClick={() => playVoice(charInfo.name, voicePath)}
+                >
+                  <span className="char-name" style={{ color: charInfo.color }}>
+                    {charInfo.name}
+                  </span>
+                  <p>« {block.content} »</p>
+                </div>
+              )
+
+            case 'sfx_cue':
+              return (
+                <ScrollTriggerBlock key={index} onVisible={() => triggerSfx(block.sfxId)}>
+                  <div className="debug-trigger">⚡</div>
+                </ScrollTriggerBlock>
+              )
+
+            case 'music_cue':
+              return (
+                <ScrollTriggerBlock key={index} onVisible={() => triggerMusic(block.action, block.trackId)}>
+                  <div className="debug-trigger">🎵</div>
+                </ScrollTriggerBlock>
+              )
+
+            case 'checkpoint':
+              saveCheckpoint(block.id)
+              return null
+
+            default:
+              return null
+          }
+        })}
+      </div>
+
+      <style>{`
+        .liseuse-container { max-width: 800px; margin: 0 auto; padding: 40px 20px 150px 20px; color: #eee; min-height: 100vh; background-color: #111; }
+        .block-text { font-size: 1.1rem; line-height: 1.6; margin-bottom: 1.5rem; color: #ccc; font-family: 'Georgia', serif; }
+        
+        .block-dialogue {
+          background: rgba(255,255,255,0.05);
+          border-left: 4px solid #fff; /* Sera écrasé par le style inline */
+          padding: 1rem; margin: 2rem 0; cursor: pointer; border-radius: 0 8px 8px 0;
+          transition: background 0.2s;
+        }
+        .block-dialogue:hover { background: rgba(255,255,255,0.1); }
+        .char-name { font-weight: bold; font-size: 0.8rem; text-transform: uppercase; display: block; margin-bottom: 5px;}
+        
+        .debug-trigger { font-size: 0.6rem; color: #333; text-align: center; padding: 2px; opacity: 0.2; }
+        .liseuse-error { color: #ff6b6b; text-align: center; margin-top: 50px; }
+        .liseuse-loading { text-align: center; margin-top: 50px; color: #888; }
+      `}</style>
+    </div>
   )
 }

@@ -1,0 +1,873 @@
+{
+  "meta": {
+    "id": "23",
+    "taleId": "osrase_malone_zadig",
+    "title": "Être libre",
+    "coverImage": "https://static.wixstatic.com/media/b9ad46_9fcfea21c381472e97a9a9bc10386509~mv2.jpg",
+    "isPremium": false,
+    "nextChapterId": "24",
+    "basePaths": {
+      "voices": "/assets/audio/voices/",
+      "music": "/assets/audio/music/",
+      "ambiance": "/assets/audio/ambiance/",
+      "sfx": "/assets/audio/sfx/"
+    },
+    "characters": {
+      "zora": { "name": "Zora", "color": "#ff9ff3" },
+      "ambroise": { "name": "Ambroise", "color": "#feca57" },
+      "zadig": { "name": "Zadig", "color": "#54a0ff" },
+      "albar": { "name": "Albar", "color": "#5f27cd" },
+      "resistant": { "name": "Résistant", "color": "#c8d6e5" },
+      "evelyne": { "name": "Evelyne", "color": "#ff6b6b" }
+    }
+  },
+  "audioRegistry": {
+    "tracks": {
+      "ambiance_truck_engine": "ch23_truck_engine_loop.mp3",
+      "theme_internal_conflict": "ch23_internal_conflict_loop.mp3",
+      "ambiance_battle_street": "ch23_battle_street_loop.mp3",
+      "ambiance_building_hall": "ch23_building_hall_loop.mp3",
+      "theme_emotional_release": "ch23_emotional_release_loop.mp3"
+    },
+    "sfx": {
+      "truck_engine_stop": "ch23_truck_engine_stop.mp3",
+      "truck_back_door_open": "ch23_truck_back_door_open.mp3",
+      "gun_cock_heavy": "ch23_gun_cock_heavy.mp3",
+      "gunshot_single_close": "ch23_gunshot_single_close.mp3",
+      "gunshots_burst_distant": "ch23_gunshots_burst_distant.mp3",
+      "body_fall_heavy": "ch23_body_fall_heavy.mp3",
+      "window_slam": "ch23_window_slam.mp3",
+      "footsteps_run_stone": "ch23_footsteps_run_stone.mp3",
+      "drones_approach": "ch23_drones_approach.mp3",
+      "door_building_heavy_open": "ch23_door_building_heavy_open.mp3",
+      "elevator_ding": "ch23_elevator_ding.mp3",
+      "elevator_doors_open": "ch23_elevator_doors_open.mp3",
+      "punches_chest": "ch23_punches_chest.mp3",
+      "fabric_rustle_hug": "ch23_fabric_rustle_hug.mp3"
+    }
+  },
+  "blocks": [
+    {
+      "type": "music_cue",
+      "action": "play_loop",
+      "trackId": "ambiance_truck_engine",
+      "volume": 0.7
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_01.mp3",
+      "content": "Je le reconnais. Arrête-toi : il est avec nous."
+    },
+    {
+      "type": "text",
+      "content": "La camionnette ralentit ; Albar ouvrit la fenêtre."
+    },
+    {
+      "type": "dialogue",
+      "charId": "ambroise",
+      "voiceFile": "ch23_ambroise_01.mp3",
+      "content": "Bonjour, Zora. N’allez pas tout droit : la garde a été renforcée ce matin."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_02.mp3",
+      "content": "Est-ce qu’il y a un autre chemin ?"
+    },
+    {
+      "type": "dialogue",
+      "charId": "ambroise",
+      "voiceFile": "ch23_ambroise_02.mp3",
+      "content": "Prenez à droite, l’un des nôtres y est posté. Après, je ne peux rien garantir."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_03.mp3",
+      "content": "Fais attention à toi, Ambroise."
+    },
+    {
+      "type": "dialogue",
+      "charId": "ambroise",
+      "voiceFile": "ch23_ambroise_03.mp3",
+      "content": "Vous aussi, madame, monsieur."
+    },
+    {
+      "type": "text",
+      "content": "fit-il en hochant la tête vers Albar, qui était au volant."
+    },
+    {
+      "type": "text",
+      "content": "Nous avancions à nouveau ; Albar n’avait pas coupé le moteur."
+    },
+    {
+      "type": "checkpoint",
+      "id": "cp_23_01"
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_01.mp3",
+      "content": "Je me souviens encore de la jeune fille effrayée que tu étais. Je remarque aujourd’hui le respect que mes hommes t’accordent, Zora."
+    },
+    {
+      "type": "text",
+      "content": "dit Zadig depuis la cabine derrière moi, séparée par un rideau épais."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_04.mp3",
+      "content": "Ça me fait du bien de revoir ces visages. Grâce au ciel, ils vont bien après tout ce temps."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_02.mp3",
+      "content": "Crois-tu en Dieu, Zora ?"
+    },
+    {
+      "type": "text",
+      "content": "demanda Zadig."
+    },
+    {
+      "type": "text",
+      "content": "Je connaissais assez de révolutionnaires pour savoir que beaucoup ne croyaient en rien. Je regardai Albar, à ma gauche ; il attendait également une réponse."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_05.mp3",
+      "content": "Pas vraiment, non."
+    },
+    {
+      "type": "text",
+      "content": "Albar parut satisfait, autant que son visage fermé pouvait l’être."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_03.mp3",
+      "content": "Je fais un rêve en ce moment. On parvient à libérer les nôtres, mais quelques-uns continuent de nous menacer et je n’ai d’autre choix que de les tuer."
+    },
+    {
+      "type": "text",
+      "content": "dit Zadig d’un ton qui me faisait froid dans le dos."
+    },
+    {
+      "type": "music_cue",
+      "action": "play_loop",
+      "trackId": "theme_internal_conflict",
+      "volume": 0.5
+    },
+    {
+      "type": "dialogue",
+      "charId": "albar",
+      "voiceFile": "ch23_albar_01.mp3",
+      "content": "Un doux rêve."
+    },
+    {
+      "type": "text",
+      "content": "fit Albar, dont la légèreté me disait que le sérieux de Zadig le mettait mal à l’aise."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_04.mp3",
+      "content": "Non, écoute la suite. À ma mort, Dieu m’accueille et me dit : « Toi qui ne connaissais pas le repos tant qu’il restait un seul opprimé, ne t’es-tu pas rendu compte que tu as fini par être l’oppresseur ? » Alors je lui réponds que je n’ai tué que ceux qui voulaient nous opprimer. Il me dit : « Chacun se bat pour les siens, jusqu’à ce que les rôles s’inversent. Voilà le cercle. » Je lui demande ce qu’il fait de ceux qu’il ne juge pas dignes du paradis. Il me montre le sol. Le sol, putain."
+    },
+    {
+      "type": "text",
+      "content": "dit-il en riant nerveusement."
+    },
+    {
+      "type": "text",
+      "content": "Il narrait son rêve comme un souvenir. Il semblait vraiment perturbé."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_05.mp3",
+      "content": "Je m’avance et je lui dis : « Mon peuple s’est libéré de ses chaînes ; je me suis battu pour qu’il n’ait plus jamais à se soumettre. Combien de temps crois-tu que je mettrais avant de considérer les damnés comme les opprimés que tu soumets ? » Et là, je me réveille en sueur. Terrifié à l’idée que, jusque dans la mort, je devrais me soumettre. Et je sens la menace sur moi lorsque, éveillé, j’envisage de le faire tomber. Certain qu’aucune pensée ne peut lui échapper."
+    },
+    {
+      "type": "dialogue",
+      "charId": "albar",
+      "voiceFile": "ch23_albar_02.mp3",
+      "content": "Et il dort même pas cinq heures."
+    },
+    {
+      "type": "text",
+      "content": "dit Albar en me regardant."
+    },
+    {
+      "type": "text",
+      "content": "Il me fit sourire. Dans un tel moment, il était capable de dédramatiser ; j’admirais ce qu’il faisait. J’essayais de répondre à Zadig, qui était tourmenté."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_06.mp3",
+      "content": "On dit qu’une fois mort, tu seras libéré de ce fardeau qui est le tien et que tes intentions se dissiperont, baignées dans l’amour."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_06.mp3",
+      "content": "Qu’est-ce que l’amour imposé, si ce n’est le sommeil d’un peuple ?"
+    },
+    {
+      "type": "text",
+      "content": "Nous continuions d’avancer et, bientôt, ils allaient sortir, affronter leur possible mort."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_07.mp3",
+      "content": "Tu feras quoi quand tout sera fini, Zora ?"
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_07.mp3",
+      "content": "À vrai dire, je n’y ai jamais vraiment pensé. Jusqu’ici, l’avenir me menait à ce jour."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_08.mp3",
+      "content": "Et toi, Albar ?"
+    },
+    {
+      "type": "dialogue",
+      "charId": "albar",
+      "voiceFile": "ch23_albar_03.mp3",
+      "content": "Une maison, rien qu’à moi. Pas de voisins, pas de problèmes. Une petite cour pour les enfants. Dans le secteur 3, il y en a plein comme ça."
+    },
+    {
+      "type": "text",
+      "content": "Albar voulait la vie que j’avais vécue jusqu’ici. Un agent se tenait au bord de la route, sur la gauche ; je lui fis un signe de la main, qu’il me rendit."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_08.mp3",
+      "content": "C’était le dernier."
+    },
+    {
+      "type": "text",
+      "content": "dis-je à l’intention de tout le monde."
+    },
+    {
+      "type": "checkpoint",
+      "id": "cp_23_02"
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_09.mp3",
+      "content": "Albar rêve de paix et de tranquillité après une vie de combat. Quel est ton rêve ?"
+    },
+    {
+      "type": "text",
+      "content": "À sa manière de le demander, j’avais le sentiment qu’il allait exaucer n’importe quel vœu que je prononcerais. Je réfléchis alors à une réponse honnête."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_09.mp3",
+      "content": "Être libre, j’imagine."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_10.mp3",
+      "content": "Ne l’es-tu pas déjà à nos côtés ?"
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_10.mp3",
+      "content": "Je me bats pour mes idées, alors oui. Mais j’obéis. Malone, Evelyne. Toi. Si on me demande, je fais."
+    },
+    {
+      "type": "text",
+      "content": "Les garçons restaient silencieux."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_11.mp3",
+      "content": "Tu me demandais ce que je ferai après : je ne sais pas et je ne veux pas savoir. Car je ferai ce que j’ai envie de faire."
+    },
+    {
+      "type": "dialogue",
+      "charId": "albar",
+      "voiceFile": "ch23_albar_04.mp3",
+      "content": "Alors que fais-tu là ?"
+    },
+    {
+      "type": "text",
+      "content": "dit Albar."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_12.mp3",
+      "content": "Je repère nos hommes."
+    },
+    {
+      "type": "text",
+      "content": "répondis-je, décontenancée."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_11.mp3",
+      "content": "Si tu n’avais pas été avec nous, Malone serait encore à creuser. Evelyne n’aurait pas contribué à la cause. Nos hommes ne seraient pas ici. Tu aurais pu fournir une description, mais tu es assise là."
+    },
+    {
+      "type": "dialogue",
+      "charId": "albar",
+      "voiceFile": "ch23_albar_05.mp3",
+      "content": "T’as déjà fait ta part, Zora."
+    },
+    {
+      "type": "text",
+      "content": "fit Albar, qui semblait comprendre le cheminement de pensée de Zadig."
+    },
+    {
+      "type": "text",
+      "content": "Je savais que, sans moi, tout cela ne serait jamais arrivé. Du moins, pas aussi vite. Mais l’entendre, de sa bouche à lui, me libéra d’un poids."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_13.mp3",
+      "content": "J’ai fait ma part, c’est vrai."
+    },
+    {
+      "type": "dialogue",
+      "charId": "albar",
+      "voiceFile": "ch23_albar_06.mp3",
+      "content": "Moi, je crois qu’une femme comme toi, si elle était vraiment libre, libre comme tu veux l’être, elle serait assise là, exactement comme tu le fais. Et si j’étais pas là, tu conduirais."
+    },
+    {
+      "type": "text",
+      "content": "fit Albar."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_14.mp3",
+      "content": "Arrêtez, vous me gênez."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_12.mp3",
+      "content": "T’es assise là parce qu’il reste une dernière chose à faire. Si je ne te donne aucun ordre en sortant, que vas-tu faire ?"
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_15.mp3",
+      "content": "Je ne sais pas. Si vous avez encore besoin de la camionnette, je la ramènerai, je suppose."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_13.mp3",
+      "content": "Tu attendrais sans rien faire jusqu’au prochain ordre ?"
+    },
+    {
+      "type": "text",
+      "content": "dit Zadig."
+    },
+    {
+      "type": "text",
+      "content": "Je ne sus quoi répondre. D’une certaine manière, il venait de résumer ma vie."
+    },
+    {
+      "type": "checkpoint",
+      "id": "cp_23_03"
+    },
+    {
+      "type": "dialogue",
+      "charId": "albar",
+      "voiceFile": "ch23_albar_07.mp3",
+      "content": "Préparez-vous, on arrive."
+    },
+    {
+      "type": "text",
+      "content": "dit Albar en arrêtant le moteur."
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "truck_engine_stop",
+      "volume": 1.0
+    },
+    {
+      "type": "music_cue",
+      "action": "fade_out",
+      "trackId": "ambiance_truck_engine",
+      "volume": 0.0
+    },
+    {
+      "type": "text",
+      "content": "J’entendis Zadig sortir ; l’arrière remua. Albar mit le frein à main."
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "truck_back_door_open",
+      "volume": 0.9
+    },
+    {
+      "type": "dialogue",
+      "charId": "albar",
+      "voiceFile": "ch23_albar_08.mp3",
+      "content": "Ce que Zad essaie de te dire, c’est qu’en sortant d’ici, pour lui, pour moi, pour tous les autres, c’est la mort ou la libération. On est libres depuis le premier jour où on a décidé de prendre les armes."
+    },
+    {
+      "type": "text",
+      "content": "Albar descendit et je me retrouvai là, seule. Dans le rétroviseur, à ma droite, je vis le bras de Zadig relevant la bâche à l’arrière. Je sortis de la camionnette, fermai la portière et fis le tour par l’avant. À ma droite, à quelques rues de là, la centrale fendait le ciel. Arrivée à la portière côté conducteur, je l’ouvris."
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "gun_cock_heavy",
+      "volume": 0.9
+    },
+    {
+      "type": "text",
+      "content": "Un bruit sec venait de l’arrière et j’imaginai l’arme désormais prête à tirer. Je restai là, face au siège. Malgré toutes ces années, tout ce que j’avais fait, j’étais encore la fille du secteur 1."
+    },
+    {
+      "type": "text",
+      "content": "Dehors, à cet instant, des centaines d’hommes se préparaient. Je ne pouvais pas rentrer. Je ne pouvais pas attendre qu’ils me donnent ce que je voulais. Plus jamais. Je fermai la portière, me dirigeai vers l’arrière. Je restai là, avec les garçons qui préparaient leurs armes. Je compris que, dès lors, la résurgence avait commencé. Albar se tourna vers moi."
+    },
+    {
+      "type": "dialogue",
+      "charId": "albar",
+      "voiceFile": "ch23_albar_09.mp3",
+      "content": "Tu sais te servir de ça ?"
+    },
+    {
+      "type": "text",
+      "content": "Il me présenta une arme de la taille de mon bras."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_16.mp3",
+      "content": "Non. Mais Evelyne m’a montré comment tirer."
+    },
+    {
+      "type": "dialogue",
+      "charId": "albar",
+      "voiceFile": "ch23_albar_10.mp3",
+      "content": "Alors tu sais t’en servir. Elle est chargée ; tu vises, tu tires. Si tu sais pas recharger, tu prends une arme par terre. Les nôtres ou les leurs."
+    },
+    {
+      "type": "text",
+      "content": "dit-il en me tendant l’arme."
+    },
+    {
+      "type": "text",
+      "content": "Les nôtres ou les leurs. Viser, tirer, ramasser. Je pris l’arme, ne pouvant plus refuser."
+    },
+    {
+      "type": "text",
+      "content": "Zadig se tourna vers moi. Je n’avais pas vu ses yeux depuis qu’on était partis. Il attrapa mes deux mains : elles tremblaient. Les siennes étaient chaudes et calmes, mais son visage présageait le pire."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_17.mp3",
+      "content": "J’ai peur."
+    },
+    {
+      "type": "text",
+      "content": "murmurai-je."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_14.mp3",
+      "content": "Tu restes derrière nous. Si Albar meurt, tu continues ; si je meurs, tu continues."
+    },
+    {
+      "type": "text",
+      "content": "acheva-t-il en secouant mes mains qu’il serrait fort, plaquant l’arme que je tenais contre moi."
+    },
+    {
+      "type": "text",
+      "content": "Il regarda la rue, vérifiant si on nous voyait."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_15.mp3",
+      "content": "Malone ne me le pardonnerait jamais, alors tu restes en vie."
+    },
+    {
+      "type": "text",
+      "content": "Il me lâcha les mains, dont le tremblement, encore présent, s’était à peine atténué. Je tenais l’arme, comme eux. Un coup de feu se fit entendre : il était proche de nous."
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "gunshot_single_close",
+      "volume": 1.0
+    },
+    {
+      "type": "dialogue",
+      "charId": "albar",
+      "voiceFile": "ch23_albar_11.mp3",
+      "content": "On doit y aller."
+    },
+    {
+      "type": "text",
+      "content": "fit Albar."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_16.mp3",
+      "content": "Sois fière de toi : c’est aujourd’hui que tu te bats pour ta liberté, Zora."
+    },
+    {
+      "type": "music_cue",
+      "action": "fade_out",
+      "trackId": "theme_internal_conflict",
+      "volume": 0.0
+    },
+    {
+      "type": "music_cue",
+      "action": "play_loop",
+      "trackId": "ambiance_battle_street",
+      "volume": 0.7
+    },
+    {
+      "type": "text",
+      "content": "Ils avancèrent tous deux entre la camionnette et l’immeuble à notre droite, dans ce couloir étroit qui nous gardait collés au mur. Je les suivais au plus près, à un ou deux pas derrière. Albar était devant. L’arme était lourde et mes doigts étaient crispés dessus. Ils trottinèrent et, en les suivant, je sentis combien mes jambes étaient faibles. Nous étions déjà à l’intersection, à découvert au milieu de la chaussée. La centrale n’était plus qu’à une rue, droit devant. Nous traversions la route ; un homme nous regardait par la fenêtre du premier étage de l’immeuble à droite de la rue adjacente. Albar le visa ; je fis de même. En courant, je voyais le viseur osciller à tel point que je n’aurais jamais pu le toucher."
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "footsteps_run_stone",
+      "volume": 0.8
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_17.mp3",
+      "content": "Il n’est pas armé."
+    },
+    {
+      "type": "text",
+      "content": "dit Zadig."
+    },
+    {
+      "type": "text",
+      "content": "L’homme prit peur et recula. Son visage disparaissait derrière le cadre. La fenêtre se ferma d’un coup sec, et je sentis l’air se vider dans ma poitrine : j’étais soulagée."
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "window_slam",
+      "volume": 0.8
+    },
+    {
+      "type": "text",
+      "content": "Arrivée dans la dernière rue, l’entrée de la grande tour se dessina, massive, à moins de trente mètres, en face. Finalement, l’appréhension avait été plus grande que l’acte. Une porte du bâtiment à notre gauche s’ouvrit. Zadig tira plusieurs balles ; mes paupières se fermaient toutes seules à chaque coup de feu. J’essayais de les garder ouvertes, mais c’était impossible. Mes yeux piquaient."
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "door_building_heavy_open",
+      "volume": 0.9
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "gunshots_burst_distant",
+      "volume": 1.0
+    },
+    {
+      "type": "text",
+      "content": "En avançant, je pus voir dans le hall d’entrée ce sur quoi il tirait. Un garde était allongé. Près de lui, je discernai une flaque se former. Je ne voulais pas mourir."
+    },
+    {
+      "type": "dialogue",
+      "charId": "albar",
+      "voiceFile": "ch23_albar_12.mp3",
+      "content": "Ils sortent !"
+    },
+    {
+      "type": "text",
+      "content": "fit Albar."
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "gunshot_single_close",
+      "volume": 1.0
+    },
+    {
+      "type": "text",
+      "content": "Mon regard se tourna vers sa voix. La tête d’Albar se plaqua contre le mur de gauche. Son corps tomba ; une trace de sang s’ajouta aux éclaboussures. Il n’y avait plus que lui, étendu à mes pieds."
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "body_fall_heavy",
+      "volume": 0.9
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_18.mp3",
+      "content": "Avance, Zora !"
+    },
+    {
+      "type": "text",
+      "content": "fit une voix."
+    },
+    {
+      "type": "text",
+      "content": "Zadig était à plusieurs mètres de moi, au bout de la rue ; je me demandais combien de temps j’étais restée à regarder Albar. Je courus pour le rattraper, ne prenant plus la peine de viser. Arrivée à son niveau, sur la route qui entoure la centrale, je constatai deux autres corps à proximité de la tour. L’un vers l’entrée, l’autre sur les marches que nous devions emprunter."
+    },
+    {
+      "type": "text",
+      "content": "Un homme qui se dirigeait vers la centrale se tourna vers nous ; je m’arrêtai sur les marches et levai mon arme. J’eus le temps de comprendre qu’il me visait, moi. Je tirai et mes yeux se fermèrent. Quand je les rouvris, il était en train de tomber. Zadig me regarda et abaissa mon arme. Un deuxième homme sortit du bâtiment en levant les mains."
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "gunshot_single_close",
+      "volume": 1.0
+    },
+    {
+      "type": "checkpoint",
+      "id": "cp_23_04"
+    },
+    {
+      "type": "dialogue",
+      "charId": "resistant",
+      "voiceFile": "ch23_resistant_01.mp3",
+      "content": "Entre vite, les drones arrivent !"
+    },
+    {
+      "type": "text",
+      "content": "fit l’homme à Zadig."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_19.mp3",
+      "content": "Je vous ai dit de faire le ménage !"
+    },
+    {
+      "type": "dialogue",
+      "charId": "resistant",
+      "voiceFile": "ch23_resistant_02.mp3",
+      "content": "C’est fait. C’est les annexes qui lancent leurs drones."
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "drones_approach",
+      "volume": 0.9
+    },
+    {
+      "type": "text",
+      "content": "Nous arrivions à la porte du bâtiment. Je regardai l’homme au sol : deux éclaboussures de sang, l’une par terre, l’autre sur le mur."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_20.mp3",
+      "content": "C’est pas toi, Zora ; notre homme s’en est occupé."
+    },
+    {
+      "type": "text",
+      "content": "fit Zadig en me prenant le bras pour entrer dans le bâtiment."
+    },
+    {
+      "type": "music_cue",
+      "action": "fade_out",
+      "trackId": "ambiance_battle_street",
+      "volume": 0.0
+    },
+    {
+      "type": "music_cue",
+      "action": "play_loop",
+      "trackId": "ambiance_building_hall",
+      "volume": 0.6
+    },
+    {
+      "type": "text",
+      "content": "À l’intérieur, des corps jonchaient le sol de ce grand hall. Cinq, peut-être plus. Il y avait une femme dans l’ascenseur en face ; elle était en talons. Elle me regarda d’un air sérieux et inquiet. Les portes commençaient à se refermer quand elle sortit d’un pas rapide vers Zadig."
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "elevator_ding",
+      "volume": 0.7
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "elevator_doors_open",
+      "volume": 0.7
+    },
+    {
+      "type": "dialogue",
+      "charId": "evelyne",
+      "voiceFile": "ch23_evelyne_01.mp3",
+      "content": "Tu n’avais pas le droit !"
+    },
+    {
+      "type": "text",
+      "content": "dit-elle en s’approchant de lui."
+    },
+    {
+      "type": "text",
+      "content": "Zadig leva les bras et son arme afin de ne pas la blesser."
+    },
+    {
+      "type": "dialogue",
+      "charId": "evelyne",
+      "voiceFile": "ch23_evelyne_02.mp3",
+      "content": "De quel droit ? Tu devais la protéger !"
+    },
+    {
+      "type": "text",
+      "content": "cria-t-elle, lui frappant le torse de ses deux poings fermés."
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "punches_chest",
+      "volume": 0.8
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_21.mp3",
+      "content": "C’était son choix ! C’était son choix, Evelyne."
+    },
+    {
+      "type": "text",
+      "content": "Zadig resta calme ; il l’agrippa par sa main libre et son coude pour la calmer."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zadig",
+      "voiceFile": "ch23_zadig_22.mp3",
+      "content": "Regarde-la : elle va bien. Occupe-toi d’elle."
+    },
+    {
+      "type": "text",
+      "content": "Evelyne lâcha Zadig et me regarda à nouveau ; ses yeux étaient compatissants. Elle s’avança et prit mon visage dans ses mains."
+    },
+    {
+      "type": "dialogue",
+      "charId": "evelyne",
+      "voiceFile": "ch23_evelyne_03.mp3",
+      "content": "Elle a du sang sur le visage !"
+    },
+    {
+      "type": "text",
+      "content": "reprocha-t-elle à Zadig."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_18.mp3",
+      "content": "C’est celui d’Albar."
+    },
+    {
+      "type": "text",
+      "content": "répondis-je, comprenant que ça ne pouvait être que le sien."
+    },
+    {
+      "type": "text",
+      "content": "Elle prit maladroitement l’arme que je tenais à peine et la posa au sol. Elle me prit dans ses bras."
+    },
+    {
+      "type": "sfx_cue",
+      "sfxId": "fabric_rustle_hug",
+      "volume": 0.6
+    },
+    {
+      "type": "dialogue",
+      "charId": "evelyne",
+      "voiceFile": "ch23_evelyne_04.mp3",
+      "content": "Oh, ma chérie."
+    },
+    {
+      "type": "text",
+      "content": "dit-elle à mon oreille."
+    },
+    {
+      "type": "text",
+      "content": "Je vis Zadig monter avec un homme dans l’ascenseur."
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_19.mp3",
+      "content": "Tu vas être pleine de sang."
+    },
+    {
+      "type": "dialogue",
+      "charId": "evelyne",
+      "voiceFile": "ch23_evelyne_05.mp3",
+      "content": "Je m’en fous ! Qu’est-ce qui t’a pris ?"
+    },
+    {
+      "type": "text",
+      "content": "me cria-t-elle, s’éloignant de moi."
+    },
+    {
+      "type": "text",
+      "content": "Elle m’entoura d’un bras dans le dos, sa main agrippant mon épaule. Elle me guida dans une pièce à l’écart, me fit asseoir et me nettoya le visage avec un linge."
+    },
+    {
+      "type": "dialogue",
+      "charId": "evelyne",
+      "voiceFile": "ch23_evelyne_06.mp3",
+      "content": "On va pouvoir rester là. Repose-toi."
+    },
+    {
+      "type": "text",
+      "content": "Nous n’avions plus de consignes. L’adrénaline s’était dissipée ; je sentais les larmes monter."
+    },
+    {
+      "type": "music_cue",
+      "action": "fade_out",
+      "trackId": "ambiance_building_hall",
+      "volume": 0.0
+    },
+    {
+      "type": "music_cue",
+      "action": "play_loop",
+      "trackId": "theme_emotional_release",
+      "volume": 0.5
+    },
+    {
+      "type": "dialogue",
+      "charId": "zora",
+      "voiceFile": "ch23_zora_20.mp3",
+      "content": "Evelyne, je suis libre."
+    },
+    {
+      "type": "text",
+      "content": "lui dis-je avant de ne plus pouvoir parler."
+    },
+    {
+      "type": "text",
+      "content": "Je vis ses yeux se remplir. Une larme coulait sur sa joue relevée par un sourire compatissant."
+    },
+    {
+      "type": "dialogue",
+      "charId": "evelyne",
+      "voiceFile": "ch23_evelyne_07.mp3",
+      "content": "Bientôt."
+    },
+    {
+      "type": "checkpoint",
+      "id": "cp_23_05"
+    }
+  ]
+}
