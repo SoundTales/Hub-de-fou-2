@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
-import { useParams, Link } from 'react-router-dom' // Import Link pour le bouton retour
-import { getChapterUrl } from '../data/talesRegistry'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { supabase } from '../supabase/supabaseClient'
+import { ArrowLeft } from 'lucide-react'
 
 // --- Composant ScrollTriggerBlock (Inchangé) ---
 const ScrollTriggerBlock = ({ onVisible, children }) => {
@@ -17,24 +18,55 @@ const ScrollTriggerBlock = ({ onVisible, children }) => {
 }
 
 export default function Liseuse() {
-  const { taleId, chapterId } = useParams() // <--- C'est ici que la magie opère
+  const { taleId, chapterId } = useParams() // taleId = slug, chapterId = UUID
   const [chapterData, setChapterData] = useState(null)
   const [hasStarted, setHasStarted] = useState(false)
   const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
 
   useEffect(() => {
-    const jsonUrl = getChapterUrl(taleId, chapterId)
+    async function fetchChapter() {
+      try {
+        // 1. Récupérer les infos du chapitre depuis Supabase
+        const { data: chapter, error: dbError } = await supabase
+            .from('chapters')
+            .select('*')
+            .eq('id', chapterId)
+            .single()
+        
+        if (dbError || !chapter) {
+            console.error("DB Error:", dbError)
+            throw new Error("Chapitre introuvable.")
+        }
 
-    if (!jsonUrl) {
-      setError("Chapitre introuvable.")
-      return
+        // 2. Récupérer le contenu JSON
+        // Cas A : Le contenu est stocké directement dans la colonne 'content' (JSONB)
+        let content = chapter.content 
+        
+        // Cas B : Le contenu est stocké via une URL externe (ex: Wix, S3) dans 'content_url'
+        if (!content && chapter.content_url) {
+            const res = await fetch(chapter.content_url)
+            if (!res.ok) throw new Error("Erreur lors du téléchargement du contenu.")
+            content = await res.json()
+        } 
+        
+        if (!content) {
+             throw new Error("Contenu du chapitre vide ou manquant.")
+        }
+
+        setChapterData(content)
+
+      } catch (err) {
+        console.error(err)
+        setError(err.message || "Une erreur est survenue.")
+      } finally {
+        setLoading(false)
+      }
     }
-
-    fetch(jsonUrl)
-      .then((res) => { if (!res.ok) throw new Error("Erreur réseau"); return res.json() })
-      .then((data) => setChapterData(data))
-      .catch((err) => setError("Impossible de charger le chapitre."))
-  }, [taleId, chapterId])
+    
+    if (chapterId) fetchChapter()
+  }, [chapterId])
 
   // --- Helpers pour la structure Optimisée ---
 
@@ -46,7 +78,7 @@ export default function Liseuse() {
 
   // Construit le chemin complet pour l'audio (Music, SFX, Voice)
   const getAudioPath = (type, filenameOrId) => {
-    if (!chapterData?.meta?.basePaths) return filenameOrId // Fallback ancienne structure
+    if (!chapterData?.meta?.basePaths) return filenameOrId // Fallback
 
     const base = chapterData.meta.basePaths
     
@@ -56,12 +88,12 @@ export default function Liseuse() {
     
     // Pour Music et SFX, on doit d'abord trouver le nom de fichier dans le registre
     if (type === 'music') {
-      const filename = chapterData.audioRegistry.tracks[filenameOrId]
+      const filename = chapterData.audioRegistry?.tracks?.[filenameOrId] || filenameOrId
       return base.music + filename
     }
     
     if (type === 'sfx') {
-      const filename = chapterData.audioRegistry.sfx[filenameOrId]
+      const filename = chapterData.audioRegistry?.sfx?.[filenameOrId] || filenameOrId
       return base.sfx + filename
     }
 
@@ -98,13 +130,22 @@ export default function Liseuse() {
 
   // --- Rendu ---
 
-  if (error) return <div className="liseuse-error">{error} <br/><Link to="/" style={{color:'white'}}>Retour au Hub</Link></div>
-  if (!chapterData) return <div className="liseuse-loading">Chargement...</div>
+  if (loading) return <div className="liseuse-loading">Chargement du récit...</div>
+  
+  if (error) return (
+    <div className="liseuse-error">
+        <p>{error}</p>
+        <Link to={`/tale/${taleId}`} className="back-link">Retour au Tale</Link>
+    </div>
+  )
+
+  if (!chapterData) return null
 
   // Écran de démarrage
   if (!hasStarted) {
     return (
       <div className="start-screen">
+        <Link to={`/tale/${taleId}`} className="absolute-back-btn"><ArrowLeft /> Retour</Link>
         <div className="cover-container">
           <img 
             src={chapterData.meta.coverImage || "https://placehold.co/400x600/1a1a1a/white?text=No+Cover"} 
@@ -123,6 +164,8 @@ export default function Liseuse() {
           .chapter-title { color: white; text-align: center; margin-bottom: 2rem; font-size: 1.5rem; }
           .start-btn { background: #00d2ff; color: #000; border: none; padding: 1rem 2rem; font-size: 1.2rem; font-weight: bold; border-radius: 50px; cursor: pointer; text-transform: uppercase; transition: transform 0.2s; }
           .start-btn:hover { transform: scale(1.05); background: #fff; }
+          .absolute-back-btn { position: absolute; top: 20px; left: 20px; color: white; text-decoration: none; display: flex; align-items: center; gap: 8px; opacity: 0.7; transition: opacity 0.2s; }
+          .absolute-back-btn:hover { opacity: 1; }
         `}</style>
       </div>
     )
@@ -131,6 +174,8 @@ export default function Liseuse() {
   // Contenu du chapitre
   return (
     <div className="liseuse-container">
+      <Link to={`/tale/${taleId}`} className="liseuse-back-nav"><ArrowLeft size={20} /> Quitter</Link>
+      
       <div className="liseuse-content">
         {chapterData.blocks.map((block, index) => {
           switch (block.type) {
@@ -182,7 +227,9 @@ export default function Liseuse() {
       </div>
 
       <style>{`
-        .liseuse-container { max-width: 800px; margin: 0 auto; padding: 40px 20px 150px 20px; color: #eee; min-height: 100vh; background-color: #111; }
+        .liseuse-container { max-width: 800px; margin: 0 auto; padding: 40px 20px 150px 20px; color: #eee; min-height: 100vh; background-color: #111; position: relative; }
+        .liseuse-back-nav { position: fixed; top: 20px; left: 20px; color: rgba(255,255,255,0.5); text-decoration: none; display: flex; align-items: center; gap: 8px; z-index: 50; transition: color 0.2s; }
+        .liseuse-back-nav:hover { color: white; }
         .block-text { font-size: 1.1rem; line-height: 1.6; margin-bottom: 1.5rem; color: #ccc; font-family: 'Georgia', serif; }
         
         .block-dialogue {
@@ -195,8 +242,9 @@ export default function Liseuse() {
         .char-name { font-weight: bold; font-size: 0.8rem; text-transform: uppercase; display: block; margin-bottom: 5px;}
         
         .debug-trigger { font-size: 0.6rem; color: #333; text-align: center; padding: 2px; opacity: 0.2; }
-        .liseuse-error { color: #ff6b6b; text-align: center; margin-top: 50px; }
+        .liseuse-error { color: #ff6b6b; text-align: center; margin-top: 50px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
         .liseuse-loading { text-align: center; margin-top: 50px; color: #888; }
+        .back-link { color: white; text-decoration: underline; }
       `}</style>
     </div>
   )

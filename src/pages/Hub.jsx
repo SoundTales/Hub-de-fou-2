@@ -1,7 +1,32 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { talesRegistry } from '../data/talesRegistry';
+import { supabase } from '../supabase/supabaseClient';
 
 export default function Hub() {
+  const [tales, setTales] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchTales() {
+      try {
+        const { data, error } = await supabase
+          .from('tales')
+          .select('*')
+          .eq('status', 'published')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        setTales(data || []);
+      } catch (error) {
+        console.error('Error fetching tales:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchTales();
+  }, []);
+
   return (
     <div className="page pre-hub-page" style={{ paddingTop: '100px' }}>
       <div className="page-section">
@@ -10,22 +35,35 @@ export default function Hub() {
           <h2>Toutes nos histoires</h2>
         </div>
 
-        <div className="tales-grid">
-          {talesRegistry.map((tale) => (
-            <Link to={`/tale/${tale.id}`} key={tale.id} className="tale-card-link">
-              <div className="tale-card">
-                <div className="tale-card__image">
-                  <img src={tale.cover} alt={tale.title} />
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px', opacity: 0.7 }}>Chargement du catalogue...</div>
+        ) : (
+          <div className="tales-grid">
+            {tales.map((tale) => (
+              <Link to={`/tale/${tale.slug}`} key={tale.id} className="tale-card-link">
+                <div className="tale-card">
+                  <div className="tale-card__image">
+                    <img 
+                      src={tale.cover_url} 
+                      alt={tale.title} 
+                      onError={(e) => {e.target.src = 'https://placehold.co/600x400/1a1a1a/ffffff?text=No+Cover'}}
+                    />
+                  </div>
+                  <div className="tale-card__content">
+                    <h3>{tale.title}</h3>
+                    <p>{tale.synopsis ? tale.synopsis.substring(0, 100) + '...' : 'Une histoire Sound Tales.'}</p>
+                    <span className="tale-card__cta">Découvrir &rarr;</span>
+                  </div>
                 </div>
-                <div className="tale-card__content">
-                  <h3>{tale.title}</h3>
-                  <p>{tale.description.substring(0, 100)}...</p>
-                  <span className="tale-card__cta">Découvrir &rarr;</span>
-                </div>
+              </Link>
+            ))}
+            {tales.length === 0 && (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '40px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px' }}>
+                <p>Aucune histoire publiée pour le moment.</p>
               </div>
-            </Link>
-          ))}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       <style>{`

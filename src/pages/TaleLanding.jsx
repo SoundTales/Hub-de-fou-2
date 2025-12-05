@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, Link, useParams } from 'react-router-dom'
-import { getTale } from '../data/talesRegistry'
+import { supabase } from '../supabase/supabaseClient'
 
 export default function TaleLanding() {
-  const { taleId } = useParams() // On récupère l'ID depuis l'URL
+  const { taleId } = useParams() // On récupère le SLUG depuis l'URL
   const [taleData, setTaleData] = useState(null)
+  const [loading, setLoading] = useState(true)
   
   const [showCredits, setShowCredits] = useState(false)
   const [visibleChapters, setVisibleChapters] = useState(5)
@@ -14,14 +15,56 @@ export default function TaleLanding() {
   
   const navigate = useNavigate()
 
-  // Chargement des données du Tale
+  // Chargement des données du Tale depuis Supabase
   useEffect(() => {
-    const data = getTale(taleId)
-    if (!data) {
-      navigate('/hub') // Redirection si Tale introuvable
-    } else {
-      setTaleData(data)
-      if (window.innerWidth > 768) setVisibleChapters(data.chapters.length)
+    async function fetchTaleData() {
+      try {
+        // 1. Récupérer le Tale via son slug
+        const { data: tale, error: taleError } = await supabase
+          .from('tales')
+          .select('*')
+          .eq('slug', taleId)
+          .single()
+
+        if (taleError || !tale) {
+          console.error('Tale not found:', taleError)
+          navigate('/hub')
+          return
+        }
+
+        // 2. Récupérer les chapitres associés
+        const { data: chapters, error: chaptersError } = await supabase
+          .from('chapters')
+          .select('*')
+          .eq('tale_id', tale.id)
+          .order('chapter_number', { ascending: true })
+
+        if (chaptersError) {
+          console.error('Error fetching chapters:', chaptersError)
+        }
+
+        // 3. Structurer les données pour l'affichage
+        const formattedData = {
+          ...tale,
+          cover: tale.cover_url, // Mapping pour garder la compatibilité
+          description: tale.synopsis, // Mapping
+          credits: tale.credits || { creative: [], voices: [] }, // Fallback si vide
+          chapters: chapters || []
+        }
+
+        setTaleData(formattedData)
+        if (window.innerWidth > 768) setVisibleChapters(formattedData.chapters.length)
+
+      } catch (error) {
+        console.error('Error in fetchTaleData:', error)
+        navigate('/hub')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (taleId) {
+      fetchTaleData()
     }
   }, [taleId, navigate])
 
@@ -45,7 +88,8 @@ export default function TaleLanding() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [showCredits])
 
-  if (!taleData) return <div className="page pre-hub-page">Chargement...</div>
+  if (loading) return <div className="page pre-hub-page" style={{display:'flex', justifyContent:'center', alignItems:'center'}}>Chargement du Tale...</div>
+  if (!taleData) return null
 
   // Raccourcis pour le rendu
   const { title, subtitle, description, cover, credits, chapters } = taleData
@@ -72,24 +116,30 @@ export default function TaleLanding() {
             <div className="pre-hub__hero-grid">
               <div className="pre-hub__media stagger-item delay-1">
                 <div className="pre-hub__poster">
-                  <img src={cover} alt={title} />
+                  <img 
+                    src={cover} 
+                    alt={title} 
+                    onError={(e) => {e.target.src = 'https://placehold.co/600x900/1a1a1a/ffffff?text=No+Cover'}}
+                  />
                 </div>
               </div>
 
               <div className="pre-hub__hero-text">
-                <h1 className="pre-hub__novel-title stagger-item delay-2">{subtitle || title}</h1>
+                <h1 className="pre-hub__novel-title stagger-item delay-2">{title}</h1>
                 <p className="pre-hub__lead stagger-item delay-3">{description}</p>
                 
                 {/* Bouton Lecture Chapitre 1 par défaut */}
-                <Link to={`/lecture/${taleId}/${chapters[0].id}`} className="pre-hub__cta stagger-item delay-4">
-                  Commencer l'écoute
-                </Link>
+                {chapters.length > 0 && (
+                  <Link to={`/lecture/${taleId}/${chapters[0].id}`} className="pre-hub__cta stagger-item delay-4">
+                    Commencer l'écoute
+                  </Link>
+                )}
 
                 {/* --- CRÉDITS --- */}
                 <div className="pre-hub__credits-section stagger-item delay-4">
                   {isDesktop ? (
                     <div className="pre-hub__credits-grid-desktop">
-                      {credits.creative.map((credit, i) => (
+                      {credits.creative && credits.creative.map((credit, i) => (
                         <div key={i} className="pre-hub__credit-card-desktop">
                           <h3 className="pre-hub__credit-head">{credit.title}</h3>
                           <ul className="pre-hub__credit-lines">
@@ -105,7 +155,7 @@ export default function TaleLanding() {
                       <div className="pre-hub__credit-card-desktop">
                         <h3 className="pre-hub__credit-head">Comédiens</h3>
                         <ul className="pre-hub__credit-lines">
-                          {credits.voices.slice(0, 3).map((v, i) => (
+                          {credits.voices && credits.voices.slice(0, 3).map((v, i) => (
                             <li key={i} className="pre-hub__credit-line">
                               <span className="pre-hub__credit-name">{v.name}</span>
                               <span className="pre-hub__credit-role">{v.role}</span>
@@ -121,7 +171,7 @@ export default function TaleLanding() {
                     <div className="pre-hub__credit-stack" onClick={openCredits}>
                       <div className="pre-hub__credit-stack__head"><h3 className="pre-hub__credit-head">Crédits</h3></div>
                       <ul className="pre-hub__credit-lines">
-                        {credits.creative[0].people.map((p, i) => (
+                        {credits.creative && credits.creative.length > 0 && credits.creative[0].people.map((p, i) => (
                           <li key={i} className="pre-hub__credit-line">
                             <span className="pre-hub__credit-name">{p.name}</span>
                             <span className="pre-hub__credit-role">{p.role}</span>
@@ -147,8 +197,8 @@ export default function TaleLanding() {
                     className={`pre-hub__chapter-card pre-hub__chapter-card--list ${isExpanded ? 'expanded' : ''}`}
                     onClick={() => handleChapterClick(chapter.id)}
                   >
-                    <div className="pre-hub__chapter-thumb" style={{ backgroundImage: `url('${chapter.cover}')` }}>
-                      {isDesktop && <span className="pre-hub__chapter-badge">{chapter.id}</span>}
+                    <div className="pre-hub__chapter-thumb" style={{ backgroundImage: `url('${cover}')` }}>
+                      {isDesktop && <span className="pre-hub__chapter-badge">{chapter.chapter_number}</span>}
                       {!isDesktop && <div className="pre-hub__chapter-thumb-overlay">▶</div>}
                     </div>
 
@@ -157,11 +207,11 @@ export default function TaleLanding() {
                         <div className="pre-hub__chapter-texts">
                           <p className="pre-hub__chapter-title">{chapter.title}</p>
                         </div>
-                        {!isDesktop && <span className="pre-hub__chapter-badge pre-hub__chapter-badge--mobile">#{chapter.id}</span>}
+                        {!isDesktop && <span className="pre-hub__chapter-badge pre-hub__chapter-badge--mobile">#{chapter.chapter_number}</span>}
                       </div>
                       
                       <div className={`pre-hub__chapter-details ${isDesktop || isExpanded ? 'visible' : ''}`}>
-                        <p className="pre-hub__chapter-desc">{chapter.summary}</p>
+                        <p className="pre-hub__chapter-desc">{chapter.description || 'Aucune description disponible.'}</p>
                         {!isDesktop && (
                           <Link 
                             to={`/lecture/${taleId}/${chapter.id}`}
@@ -191,7 +241,7 @@ export default function TaleLanding() {
               <button className="credits-overlay__close" onClick={closeCredits}>Fermer</button>
             </div>
             <div className="credits-overlay__grid">
-              {credits.creative.map((c, i) => (
+              {credits.creative && credits.creative.map((c, i) => (
                 <div key={i} className="credits-overlay__card">
                   <h3 className="credits-overlay__card-title">{c.title}</h3>
                   <ul>{c.people.map((p, j) => <li key={j}>{p.name} - {p.role}</li>)}</ul>
@@ -200,7 +250,7 @@ export default function TaleLanding() {
             </div>
             <div className="credits-overlay__voices">
               <h3>Comédiens</h3>
-              <ul>{credits.voices.map((v, i) => <li key={i}>{v.name} - {v.role}</li>)}</ul>
+              <ul>{credits.voices && credits.voices.map((v, i) => <li key={i}>{v.name} - {v.role}</li>)}</ul>
             </div>
           </div>
         </div>,

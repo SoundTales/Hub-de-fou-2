@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Footer from './Footer.jsx'
+import { supabase } from "../../supabase/supabaseClient";
 
 const navClass = ({ isActive }) => (isActive ? 'nav-link nav-link--active' : 'nav-link')
-
+  console.log(supabase);
+  
 export default function MainLayout() {
   const [headerHidden, setHeaderHidden] = useState(false)
   const [isAtTop, setIsAtTop] = useState(true)
