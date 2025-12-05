@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, Link, useParams } from 'react-router-dom'
 import { supabase } from '../supabase/supabaseClient'
+import { useAuth } from '../supabase/AuthContext.jsx'
 
 export default function TaleLanding() {
   const { taleId } = useParams() // On récupère le SLUG depuis l'URL
@@ -12,6 +13,9 @@ export default function TaleLanding() {
   const [visibleChapters, setVisibleChapters] = useState(5)
   const [expandedChapterId, setExpandedChapterId] = useState(null)
   const [isDesktop, setIsDesktop] = useState(false)
+  const [hasPurchase, setHasPurchase] = useState(false)
+  const [checkingPurchase, setCheckingPurchase] = useState(false)
+  const { user } = useAuth()
   
   const navigate = useNavigate()
 
@@ -71,6 +75,32 @@ export default function TaleLanding() {
     fetchTaleData()
   }, [taleId, navigate])
 
+  // Vérifie si l'utilisateur a acheté le Tale (déverrouille les chapitres premium)
+  useEffect(() => {
+    async function checkPurchase() {
+      if (!taleData?.id || !user) {
+        setHasPurchase(false)
+        return
+      }
+      setCheckingPurchase(true)
+      const { data, error } = await supabase
+        .from('purchases')
+        .select('id')
+        .eq('tale_id', taleData.id)
+        .eq('user_id', user.id)
+        .limit(1)
+
+      if (error) {
+        console.error('Error checking purchase:', error)
+        setHasPurchase(false)
+      } else {
+        setHasPurchase(!!data?.length)
+      }
+      setCheckingPurchase(false)
+    }
+    checkPurchase()
+  }, [taleData?.id, user])
+
   // Gestion Resize
   useEffect(() => {
     const handleResize = () => {
@@ -98,11 +128,20 @@ export default function TaleLanding() {
   const { title, subtitle, description, cover, credits, chapters } = taleData
   const displayedChapters = isDesktop ? chapters : chapters.slice(0, visibleChapters)
 
-  const handleChapterClick = (chapterId) => {
+  const handleChapterClick = (chapter) => {
+    const locked = chapter.is_premium && !hasPurchase
+    if (locked) {
+      if (!user) {
+        window.alert('Connexion requise pour accéder aux chapitres premium.')
+      } else {
+        window.alert('Achetez ce Tale pour accéder aux chapitres premium.')
+      }
+      return
+    }
     if (isDesktop) {
-      navigate(`/lecture/${taleId}/${chapterId}`)
+      navigate(`/lecture/${taleId}/${chapter.id}`)
     } else {
-      setExpandedChapterId(expandedChapterId === chapterId ? null : chapterId)
+      setExpandedChapterId(expandedChapterId === chapter.id ? null : chapter.id)
     }
   }
 
@@ -194,11 +233,12 @@ export default function TaleLanding() {
             <div className="pre-hub__chapter-list">
               {displayedChapters.map((chapter) => {
                 const isExpanded = expandedChapterId === chapter.id
+                const isLocked = chapter.is_premium && !hasPurchase
                 return (
                   <article
                     key={chapter.id}
-                    className={`pre-hub__chapter-card pre-hub__chapter-card--list ${isExpanded ? 'expanded' : ''}`}
-                    onClick={() => handleChapterClick(chapter.id)}
+                    className={`pre-hub__chapter-card pre-hub__chapter-card--list ${isExpanded ? 'expanded' : ''} ${isLocked ? 'chapter-locked' : ''}`}
+                    onClick={() => handleChapterClick(chapter)}
                   >
                     <div className="pre-hub__chapter-thumb" style={{ backgroundImage: `url('${cover}')` }}>
                       {isDesktop && <span className="pre-hub__chapter-badge">{chapter.chapter_number}</span>}
@@ -209,6 +249,9 @@ export default function TaleLanding() {
                       <div className="pre-hub__chapter-header-mobile">
                         <div className="pre-hub__chapter-texts">
                           <p className="pre-hub__chapter-title">{chapter.title}</p>
+                          {chapter.is_premium && (
+                            <span style={{ color: '#f59e0b', fontSize: '0.85rem', marginLeft: '8px' }}>Premium</span>
+                          )}
                         </div>
                         {!isDesktop && <span className="pre-hub__chapter-badge pre-hub__chapter-badge--mobile">#{chapter.chapter_number}</span>}
                       </div>
@@ -216,13 +259,23 @@ export default function TaleLanding() {
                       <div className={`pre-hub__chapter-details ${isDesktop || isExpanded ? 'visible' : ''}`}>
                         <p className="pre-hub__chapter-desc">{chapter.description || 'Aucune description disponible.'}</p>
                         {!isDesktop && (
-                          <Link 
-                            to={`/lecture/${taleId}/${chapter.id}`}
-                            className="pre-hub__chapter-play-btn"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            Lire
-                          </Link>
+                          isLocked ? (
+                            <button
+                              className="pre-hub__chapter-play-btn"
+                              onClick={(e) => { e.stopPropagation(); handleChapterClick(chapter) }}
+                              style={{ backgroundColor: '#f59e0b', color: '#0a0a0a' }}
+                            >
+                              {user ? 'Acheter' : 'Connexion requise'}
+                            </button>
+                          ) : (
+                            <Link 
+                              to={`/lecture/${taleId}/${chapter.id}`}
+                              className="pre-hub__chapter-play-btn"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              Lire
+                            </Link>
+                          )
                         )}
                       </div>
                     </div>

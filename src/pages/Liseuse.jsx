@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../supabase/supabaseClient'
 import { ArrowLeft } from 'lucide-react'
+import { useAuth } from '../supabase/AuthContext.jsx'
 
 // --- Composant ScrollTriggerBlock (Inchangé) ---
 const ScrollTriggerBlock = ({ onVisible, children }) => {
@@ -23,6 +24,7 @@ export default function Liseuse() {
   const [hasStarted, setHasStarted] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
 
   useEffect(() => {
     async function fetchChapter() {
@@ -36,7 +38,11 @@ export default function Liseuse() {
         
         if (dbError || !chapter) {
             console.error("DB Error:", dbError)
-            throw new Error("Chapitre introuvable.")
+            throw new Error("Chapitre introuvable ou accès refusé.")
+        }
+
+        if (chapter.is_premium && !user) {
+          throw new Error("Connexion ou achat requis pour ce chapitre premium.")
         }
 
         // 2. Récupérer le contenu JSON
@@ -102,7 +108,7 @@ export default function Liseuse() {
   // --- Actions ---
 
   const handleStartChapter = () => {
-    console.log("🔊 Audio Context Unlocked")
+    console.log("Audio context unlocked")
     setHasStarted(true)
   }
 

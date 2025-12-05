@@ -2367,3 +2367,173 @@ a {
     min-width: 140px;
   }
 }
+
+/* --- LOGIN MODAL STYLES --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  position: relative;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  animation: slideUp 0.3s ease;
+}
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  font-family: 'Playfair Display', serif;
+  color: #1f2023;
+  margin-bottom: 0.5rem;
+}
+
+.modal-content p {
+  color: #666;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  font-family: 'Lato', sans-serif;
+  transition: border-color 0.2s;
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: #1f2023;
+}
+
+.modal-submit-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #1f2023;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.5rem 0;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #ddd;
+}
+
+.auth-divider span {
+  padding: 0 10px;
+}
+
+.social-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-family: 'Lato', sans-serif;
+}
+
+.social-btn:hover {
+  background-color: #f9f9f9;
+}
+
+.social-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.modal-submit-btn:hover {
+  background-color: #333;
+}
+
+.modal-submit-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.modal-message {
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.modal-message.error {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.modal-message.success {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+

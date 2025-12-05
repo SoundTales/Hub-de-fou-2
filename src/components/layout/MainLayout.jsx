@@ -2,18 +2,22 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Footer from './Footer.jsx'
 import { supabase } from "../../supabase/supabaseClient";
+import { useAuth } from '../../supabase/AuthContext.jsx'
+import LoginModal from '../auth/LoginModal'
 
 const navClass = ({ isActive }) => (isActive ? 'nav-link nav-link--active' : 'nav-link')
-  console.log(supabase);
-  
+
 export default function MainLayout() {
   const [headerHidden, setHeaderHidden] = useState(false)
   const [isAtTop, setIsAtTop] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
+  const [authMessage, setAuthMessage] = useState('')
+  const [showLoginModal, setShowLoginModal] = useState(false)
   const logoSrc = `${import.meta.env.BASE_URL}logo.svg`
   const location = useLocation()
   const navigate = useNavigate()
+  const { user, loading: authLoading, signInWithEmail, signOut } = useAuth()
 
   useEffect(() => {
     let lastScrollY = window.scrollY
@@ -81,6 +85,16 @@ export default function MainLayout() {
 
   const handleResumeClick = () => navigate('/liseuse')
 
+  const handleAuthClick = async () => {
+    if (authLoading) return
+    if (user) {
+      await signOut()
+      setAuthMessage('Déconnecté.')
+      return
+    }
+    setShowLoginModal(true)
+  }
+
   // On affiche la barre du bas uniquement sur le Hub pour l'instant
   const shouldShowBottomBar = location.pathname.startsWith('/hub')
 
@@ -130,10 +144,16 @@ export default function MainLayout() {
           <NavLinks />
         </nav>
 
-        <button type="button" className="app-login-btn" onClick={closeMobileMenu}>
-          Connexion
+        <button type="button" className="app-login-btn" onClick={() => { closeMobileMenu(); handleAuthClick() }}>
+          {user ? 'Déconnexion' : 'Connexion / Inscription'}
         </button>
       </header>
+
+      {authMessage && (
+        <div style={{ position: 'fixed', top: '70px', right: '20px', background: 'rgba(0,0,0,0.7)', color: '#fff', padding: '8px 12px', borderRadius: '8px', zIndex: 2000 }}>
+          {user && <strong>{user.email}</strong>} {authMessage}
+        </div>
+      )}
 
       {/* Navigation Mobile (Overlay séparé du header pour éviter les bugs d'affichage) */}
       <div className={`mobile-menu-overlay ${mobileMenuOpen ? 'mobile-menu-overlay--open' : ''}`}>
@@ -176,6 +196,7 @@ export default function MainLayout() {
           </button>
         </div>
       )}
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </div>
   )
 }

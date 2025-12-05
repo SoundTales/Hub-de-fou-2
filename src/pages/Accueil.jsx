@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabase/supabaseClient'
 import { BookOpen, Headphones, Moon, Play, Info, Mail, Check, AlertCircle } from 'lucide-react'
@@ -22,34 +22,12 @@ const FEATURES = [
 ]
 
 export default function Accueil() {
-  const [tales, setTales] = useState([])
-  const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState('')
   const [subscribeStatus, setSubscribeStatus] = useState('idle') // idle, loading, success, error, already_subscribed
+  const [prefAudio, setPrefAudio] = useState(true)
+  const [prefVisual, setPrefVisual] = useState(false)
   const [expandCard1, setExpandCard1] = useState(false)
   const [expandCard2, setExpandCard2] = useState(false)
-
-  useEffect(() => {
-    async function fetchTales() {
-      try {
-        const { data, error } = await supabase
-          .from('tales')
-          .select('*')
-          .eq('status', 'published')
-          .order('created_at', { ascending: false })
-          .limit(3) // Just show the latest 3 on home
-
-        if (error) throw error
-        setTales(data || [])
-      } catch (error) {
-        console.error('Error fetching tales:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchTales()
-  }, [])
 
   const handleSubscribe = async (e) => {
     e.preventDefault()
@@ -60,7 +38,11 @@ export default function Accueil() {
     try {
       const { error } = await supabase
         .from('newsletter_subscribers')
-        .insert([{ email }])
+        .insert([{
+          email,
+          preference_audio: prefAudio,
+          preference_visual: prefVisual
+        }])
         
       if (error) {
         if (error.code === '23505') { // Unique violation code for Postgres
@@ -137,35 +119,6 @@ export default function Accueil() {
           </div>
         </div>
       </section>
-
-      {/* New Dynamic Section: Latest Tales */}
-      {!loading && tales.length > 0 && (
-        <section className="accueil__features-section" style={{ paddingBottom: 0 }}>
-            <div className="page-section-header">
-                <p className="accueil__eyebrow">À l'affiche</p>
-                <h2>Les derniers Tales sortis</h2>
-            </div>
-            <div className="accueil__features-grid">
-                {tales.map(tale => (
-                    <Link to={`/hub`} key={tale.id} className="accueil__feature-card" style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}>
-                        <div style={{ marginBottom: '1rem', borderRadius: '8px', overflow: 'hidden', aspectRatio: '16/9' }}>
-                            <img 
-                                src={tale.cover_url} 
-                                alt={tale.title} 
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                onError={(e) => {e.target.src = 'https://placehold.co/600x400/1a1a1a/ffffff?text=No+Cover'}}
-                            />
-                        </div>
-                        <h3>{tale.title}</h3>
-                        <p>{tale.synopsis ? tale.synopsis.substring(0, 120) + '...' : 'Découvrez cette histoire...'}</p>
-                        <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ffff80', fontSize: '0.9rem' }}>
-                            <Play size={16} /> Commencer la lecture
-                        </div>
-                    </Link>
-                ))}
-            </div>
-        </section>
-      )}
 
       <section className="accueil__features-section">
         <div className="page-section-header">
@@ -310,14 +263,26 @@ export default function Accueil() {
                 </div>
             )}
 
-            <fieldset className="checkbox-group" style={{ marginTop: '1rem' }}>
-              <legend>Préférences de contenus</legend>
+                        <fieldset className="checkbox-group" style={{ marginTop: "1rem" }}>
+              <legend>Preferences de contenus</legend>
               <div className="checkbox-item">
-                <input type="checkbox" id="newsletter-audio" name="newsletter-audio" defaultChecked />
-                <label htmlFor="newsletter-audio">Écoutes audio & lectures</label>
+                <input
+                  type="checkbox"
+                  id="newsletter-audio"
+                  name="newsletter-audio"
+                  checked={prefAudio}
+                  onChange={(e) => setPrefAudio(e.target.checked)}
+                />
+                <label htmlFor="newsletter-audio">Ecoutes audio & lectures</label>
               </div>
               <div className="checkbox-item">
-                <input type="checkbox" id="newsletter-visuel" name="newsletter-visuel" />
+                <input
+                  type="checkbox"
+                  id="newsletter-visuel"
+                  name="newsletter-visuel"
+                  checked={prefVisual}
+                  onChange={(e) => setPrefVisual(e.target.checked)}
+                />
                 <label htmlFor="newsletter-visuel">Illustrations & making-of</label>
               </div>
             </fieldset>
