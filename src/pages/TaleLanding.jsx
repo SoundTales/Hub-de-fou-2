@@ -17,6 +17,11 @@ export default function TaleLanding() {
 
   // Chargement des données du Tale depuis Supabase
   useEffect(() => {
+    if (!taleId) {
+      setLoading(false)
+      return
+    }
+
     async function fetchTaleData() {
       try {
         // 1. Récupérer le Tale via son slug
@@ -63,9 +68,7 @@ export default function TaleLanding() {
       }
     }
 
-    if (taleId) {
-      fetchTaleData()
-    }
+    fetchTaleData()
   }, [taleId, navigate])
 
   // Gestion Resize

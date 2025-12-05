@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../supabase/supabaseClient'
 import { ArrowLeft } from 'lucide-react'
 
@@ -23,7 +23,6 @@ export default function Liseuse() {
   const [hasStarted, setHasStarted] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
-  const navigate = useNavigate()
 
   useEffect(() => {
     async function fetchChapter() {
