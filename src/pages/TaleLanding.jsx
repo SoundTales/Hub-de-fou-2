@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate, Link, useParams } from 'react-router-dom'
+import { useNavigate, Link, useParams, useLocation } from 'react-router-dom'
 import { supabase } from '../supabase/supabaseClient'
 import { useAuth } from '../supabase/AuthContext.jsx'
 
 export default function TaleLanding() {
   const { taleId } = useParams() // On récupère le SLUG depuis l'URL
-  const [taleData, setTaleData] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const location = useLocation()
+  
+  // Initialisation avec les données passées par le Link si disponibles
+  const [taleData, setTaleData] = useState(location.state?.tale ? { 
+    ...location.state.tale, 
+    cover: location.state.tale.cover_url,
+    description: location.state.tale.synopsis,
+    credits: location.state.tale.credits || { creative: [], voices: [] },
+    chapters: [] 
+  } : null)
+  const [loading, setLoading] = useState(!location.state?.tale)
   
   const [showCredits, setShowCredits] = useState(false)
   const [visibleChapters, setVisibleChapters] = useState(5)
@@ -128,7 +137,7 @@ export default function TaleLanding() {
   const { title, subtitle, description, cover, credits, chapters } = taleData
   const displayedChapters = isDesktop ? chapters : chapters.slice(0, visibleChapters)
 
-  const handleChapterClick = (chapter) => {
+  const handleChapterClick = (chapter, forcePlay = false) => {
     const locked = chapter.is_premium && !hasPurchase
     if (locked) {
       if (!user) {
@@ -138,7 +147,8 @@ export default function TaleLanding() {
       }
       return
     }
-    if (isDesktop) {
+    if (isDesktop || forcePlay) {
+      enterFullscreen()
       navigate(`/lecture/${taleId}/${chapter.id}`)
     } else {
       setExpandedChapterId(expandedChapterId === chapter.id ? null : chapter.id)
@@ -148,19 +158,28 @@ export default function TaleLanding() {
   const openCredits = () => setShowCredits(true)
   const closeCredits = () => setShowCredits(false)
 
+  const enterFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.log(`Error attempting to enable fullscreen: ${err.message}`)
+      })
+    }
+  }
+
   return (
-    <div className="page pre-hub-page">
+    <div className="page pre-hub-page page--fade">
       <div className="pre-hub">
         <div className="pre-hub__inner">
           
           {/* --- HERO SECTION --- */}
           <div className="pre-hub__hero">
             <div className="pre-hub__hero-grid">
-              <div className="pre-hub__media stagger-item delay-1">
+              <div className="pre-hub__media">
                 <div className="pre-hub__poster">
                   <img 
                     src={cover} 
                     alt={title} 
+                    loading="eager"
                     onError={(e) => {e.target.src = 'https://placehold.co/600x900/1a1a1a/ffffff?text=No+Cover'}}
                   />
                 </div>
@@ -172,7 +191,11 @@ export default function TaleLanding() {
                 
                 {/* Bouton Lecture Chapitre 1 par défaut */}
                 {chapters.length > 0 && (
-                  <Link to={`/lecture/${taleId}/${chapters[0].id}`} className="pre-hub__cta stagger-item delay-4">
+                  <Link 
+                    to={`/lecture/${taleId}/${chapters[0].id}`} 
+                    className="pre-hub__cta stagger-item delay-4"
+                    onClick={enterFullscreen}
+                  >
                     Commencer l'écoute
                   </Link>
                 )}
@@ -183,7 +206,7 @@ export default function TaleLanding() {
                     <div className="pre-hub__credits-grid-desktop">
                       {credits.creative && credits.creative.map((credit, i) => (
                         <div key={i} className="pre-hub__credit-card-desktop">
-                          <h3 className="pre-hub__credit-head">{credit.title}</h3>
+                          <h3 className="pre-hub__credit-head">{credit.title === 'Production' ? 'Illustration' : credit.title}</h3>
                           <ul className="pre-hub__credit-lines">
                             {credit.people.map((p, j) => (
                               <li key={j} className="pre-hub__credit-line">
@@ -213,12 +236,14 @@ export default function TaleLanding() {
                     <div className="pre-hub__credit-stack" onClick={openCredits}>
                       <div className="pre-hub__credit-stack__head"><h3 className="pre-hub__credit-head">Crédits</h3></div>
                       <ul className="pre-hub__credit-lines">
-                        {credits.creative && credits.creative.length > 0 && credits.creative[0].people.map((p, i) => (
-                          <li key={i} className="pre-hub__credit-line">
-                            <span className="pre-hub__credit-name">{p.name}</span>
-                            <span className="pre-hub__credit-role">{p.role}</span>
-                          </li>
-                        ))}
+                        {credits.creative && credits.creative.slice(0, 2).map((group) => 
+                          group.people.map((p, i) => (
+                            <li key={`${group.title}-${i}`} className="pre-hub__credit-line">
+                              <span className="pre-hub__credit-name">{p.name}</span>
+                              <span className="pre-hub__credit-role">{p.role}</span>
+                            </li>
+                          ))
+                        )}
                       </ul>
                       <div className="pre-hub__credit-more-container"><span className="pre-hub__credit-more">Afficher plus</span></div>
                     </div>
@@ -240,9 +265,17 @@ export default function TaleLanding() {
                     className={`pre-hub__chapter-card pre-hub__chapter-card--list ${isExpanded ? 'expanded' : ''} ${isLocked ? 'chapter-locked' : ''}`}
                     onClick={() => handleChapterClick(chapter)}
                   >
-                    <div className="pre-hub__chapter-thumb" style={{ backgroundImage: `url('${cover}')` }}>
+                    <div 
+                      className="pre-hub__chapter-thumb" 
+                      style={{ backgroundImage: `url('${cover}')` }}
+                      onClick={(e) => {
+                        if (!isDesktop) {
+                          e.stopPropagation()
+                          handleChapterClick(chapter, true)
+                        }
+                      }}
+                    >
                       {isDesktop && <span className="pre-hub__chapter-badge">{chapter.chapter_number}</span>}
-                      {!isDesktop && <div className="pre-hub__chapter-thumb-overlay">▶</div>}
                     </div>
 
                     <div className="pre-hub__chapter-content">
@@ -258,24 +291,14 @@ export default function TaleLanding() {
                       
                       <div className={`pre-hub__chapter-details ${isDesktop || isExpanded ? 'visible' : ''}`}>
                         <p className="pre-hub__chapter-desc">{chapter.description || 'Aucune description disponible.'}</p>
-                        {!isDesktop && (
-                          isLocked ? (
-                            <button
-                              className="pre-hub__chapter-play-btn"
-                              onClick={(e) => { e.stopPropagation(); handleChapterClick(chapter) }}
-                              style={{ backgroundColor: '#f59e0b', color: '#0a0a0a' }}
-                            >
-                              {user ? 'Acheter' : 'Connexion requise'}
-                            </button>
-                          ) : (
-                            <Link 
-                              to={`/lecture/${taleId}/${chapter.id}`}
-                              className="pre-hub__chapter-play-btn"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              Lire
-                            </Link>
-                          )
+                        {!isDesktop && isLocked && (
+                          <button
+                            className="pre-hub__chapter-play-btn"
+                            onClick={(e) => { e.stopPropagation(); handleChapterClick(chapter) }}
+                            style={{ backgroundColor: '#f59e0b', color: '#0a0a0a' }}
+                          >
+                            {user ? 'Acheter' : 'Connexion requise'}
+                          </button>
                         )}
                       </div>
                     </div>

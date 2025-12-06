@@ -90,18 +90,19 @@ export default function CreerTale() {
   const selectCollab = () => setMode('collab')
 
   return (
-    <div className="page accueil-page">
+    <div className="page accueil-page page--fade">
       <section className="accueil__hero">
         <div className="accueil__hero-texts">
-          <h1 className="accueil__title">
-            <span>Créer votre Tale,</span>
-            <span>mettre votre histoire en scène</span>
+          <p className="accueil__eyebrow stagger-item delay-1">Studio de création</p>
+          <h1 className="accueil__title stagger-item delay-2">
+            <span style={{ color: '#ffff80' }}>Créer votre Tale,</span>
+            <span>mettre votre histoire en <span style={{ color: '#ffff80' }}>scène</span></span>
           </h1>
-          <p className="accueil__lede">
+          <p className="accueil__lede stagger-item delay-3">
             Vous avez un roman court, un scénario de série ou un univers fort ? Un Tale vous permet de lui ajouter musique, sound design,
             voix jouées et illustrations, tout en gardant une lecture fluide dans la Liseuse.
           </p>
-          <div className="accueil__cta-row">
+          <div className="accueil__cta-row stagger-item delay-4">
             <Link className="accueil__cta" to="/hub">
               Voir un Tale en action
             </Link>
@@ -111,7 +112,7 @@ export default function CreerTale() {
           </div>
         </div>
 
-        <div className="accueil__hero-visual">
+        <div className="accueil__hero-visual stagger-item delay-3">
           <div className="accueil__hero-card">
             <h2 className="accueil__hero-card__title">Ce que nous apportons</h2>
             <p className="accueil__hero-card__text">
@@ -163,22 +164,24 @@ export default function CreerTale() {
           <p className="accueil__eyebrow">Le catalogue</p>
           <h2>Nos formats de production</h2>
         </div>
-        {TALE_FORMATS.map((format) => (
-          <article key={format.title} className="creer-format-card">
-            <header className="creer-format-card__head">
-              <h3>{format.title}</h3>
-              <p className="creer-format-card__duration">{format.duration}</p>
-            </header>
-            <p style={{ opacity: 0.85, lineHeight: 1.6 }}>{format.summary}</p>
-            <div className="creer-format-card__tags" style={{ marginTop: 'auto', paddingTop: '16px' }}>
-              {format.bullets.map((item) => (
-                <span key={item} className="creer-format-card__tag">
-                  {item}
-                </span>
-              ))}
-            </div>
-          </article>
-        ))}
+        <div className="formats-grid">
+          {TALE_FORMATS.map((format) => (
+            <article key={format.title} className="creer-format-card">
+              <header className="creer-format-card__head">
+                <h3>{format.title}</h3>
+                <p className="creer-format-card__duration">{format.duration}</p>
+              </header>
+              <p style={{ opacity: 0.85, lineHeight: 1.6 }}>{format.summary}</p>
+              <div className="creer-format-card__tags" style={{ marginTop: 'auto', paddingTop: '16px' }}>
+                {format.bullets.map((item) => (
+                  <span key={item} className="creer-format-card__tag">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="value-grid" aria-label="Expérience et vision pour les artistes">

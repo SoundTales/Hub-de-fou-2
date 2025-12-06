@@ -1,0 +1,24 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "append_styles",
+			"type": "shell",
+			"command": "echo \"Appending mobile styles to styles.css\"",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "append_splash_styles",
+			"type": "shell",
+			"command": "echo \"Appending Splash styles to styles.css\"",
+			"args": [
+				"echo \"Appending Splash styles to styles.css\""
+			],
+			"isBackground": false,
+			"group": "build"
+		}
+	]
+}

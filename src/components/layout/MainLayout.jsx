@@ -22,7 +22,7 @@ export default function MainLayout() {
   useEffect(() => {
     let lastScrollY = window.scrollY
     let accumulatedDelta = 0
-    const SCROLL_THRESHOLD = 60 // Seuil de tolérance pour éviter les sauts
+    const SCROLL_THRESHOLD = 15 // Seuil très bas pour une réactivité immédiate
 
     const handleScroll = () => {
       // Si le menu mobile est ouvert, on force l'affichage du header
@@ -33,13 +33,18 @@ export default function MainLayout() {
 
       const currentY = window.scrollY
       const delta = currentY - lastScrollY
-      const atTop = currentY <= 20
+      
+      // Zone où le header est forcé d'être visible (tout en haut)
+      const mustShowHeader = currentY <= 15
+      
+      // Zone où le header est transparent (plus large pour éviter le flicker)
+      const isTransparentZone = currentY <= 150
 
-      // Mise à jour de l'état "en haut de page"
-      setIsAtTop(atTop)
+      // Mise à jour de l'état pour la classe CSS (contrôle la transparence)
+      setIsAtTop(isTransparentZone)
 
       // Si on est tout en haut, on affiche toujours le header
-      if (atTop) {
+      if (mustShowHeader) {
         setHeaderHidden(false)
         accumulatedDelta = 0
         lastScrollY = currentY
@@ -67,6 +72,9 @@ export default function MainLayout() {
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
+    // Check initial scroll position
+    handleScroll()
+    
     return () => window.removeEventListener('scroll', handleScroll)
   }, [mobileMenuOpen, headerHidden])
 
@@ -83,8 +91,6 @@ export default function MainLayout() {
 
   const toggleFavorite = () => setIsFavorite((prev) => !prev)
 
-  const handleResumeClick = () => navigate('/liseuse')
-
   const handleAuthClick = async () => {
     if (authLoading) return
     if (user) {
@@ -97,6 +103,7 @@ export default function MainLayout() {
 
   // On affiche la barre du bas uniquement sur le Hub pour l'instant
   const shouldShowBottomBar = location.pathname.startsWith('/hub')
+  const isTaleLanding = location.pathname.startsWith('/tale/')
 
   // Liste des liens pour éviter la duplication
   const NavLinks = () => (
@@ -106,9 +113,6 @@ export default function MainLayout() {
       </NavLink>
       <NavLink to="/hub" className={navClass} onClick={closeMobileMenu}>
         Hub
-      </NavLink>
-      <NavLink to="/liseuse" className={navClass} onClick={closeMobileMenu}>
-        Liseuse (Démo)
       </NavLink>
       <NavLink to="/creer-tale" className={navClass} onClick={closeMobileMenu}>
         Créer un Tale
@@ -121,7 +125,7 @@ export default function MainLayout() {
       <header
         className={`app-header ${headerHidden ? 'app-header--hidden' : ''} ${
           !isAtTop ? 'app-header--solid' : ''
-        }`}
+        } ${isAtTop || headerHidden ? 'app-header--transparent' : ''}`}
       >
         <button
           type="button"
@@ -145,7 +149,7 @@ export default function MainLayout() {
         </nav>
 
         <button type="button" className="app-login-btn" onClick={() => { closeMobileMenu(); handleAuthClick() }}>
-          {user ? 'Déconnexion' : 'Connexion / Inscription'}
+          {user ? 'Déconnexion' : 'Connexion'}
         </button>
       </header>
 
@@ -169,33 +173,8 @@ export default function MainLayout() {
       {/* Le footer est maintenant toujours affiché */}
       <Footer />
 
-      {shouldShowBottomBar && (
-        <div className={`mobile-bottom-bar ${headerHidden ? 'mobile-bottom-bar--hidden' : ''}`} aria-label="Barre de lecture">
-          <button
-            type="button"
-            className={`mobile-bottom-bar__icon-btn ${isFavorite ? 'mobile-bottom-bar__icon-btn--active' : ''}`}
-            aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-            aria-pressed={isFavorite}
-            onClick={toggleFavorite}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-            </svg>
-          </button>
-          
-          <button type="button" className="mobile-bottom-bar__resume-btn" onClick={handleResumeClick}>
-            <span className="mobile-bottom-bar__play-icon">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </span>
-            <div className="mobile-bottom-bar__text-group">
-              <span className="mobile-bottom-bar__label">Reprendre</span>
-              <span className="mobile-bottom-bar__sub">Chapitre 1 · 12min</span>
-            </div>
-          </button>
-        </div>
-      )}
+      {/* Barre du bas supprimée comme demandé */}
+      
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </div>
   )

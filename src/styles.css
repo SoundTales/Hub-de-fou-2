@@ -70,7 +70,8 @@ a {
   right: 0;
   z-index: 900;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
-  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1), background 300ms ease;
+  /* Animation plus fluide et naturelle (ease-out doux) */
+  transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1), background 300ms ease;
 }
 
 /* CORRECTION : On s'assure que les éléments interactifs du header restent au-dessus du menu mobile */
@@ -547,19 +548,65 @@ a {
   color: #1f2023;
 }
 
-/* ANIMATIONS DE PAGE */
-@keyframes fadeInPage {
+/* =========================================
+   ANIMATIONS & TRANSITIONS GLOBALES
+   ========================================= */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Classe de base pour les pages */
+.page {
+  color: #fefff4;
+  width: 100%;
+  flex: 1;
+  /* Par défaut : Fade In Up subtil */
+  animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Variantes d'animation */
+.page--fade {
+  animation: fadeInSmooth 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes fadeInSmooth {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.page {
-  color: #fefff4;
-  width: 100%;
-  /* Ajout de l'animation d'entrée */
-  animation: fadeInPage 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-  /* FIX: La page s'étend pour remplir l'espace disponible dans le main */
-  flex: 1;
+.page--slide-right {
+  /* Sur mobile, on slide depuis la droite */
+  animation: slideInRight 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.page--zoom {
+  animation: zoomIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Media Queries pour adapter les animations */
+@media (min-width: 769px) {
+  /* Sur desktop, le slide right peut être trop agressif, on préfère souvent un fade/up */
+  .page--slide-right {
+    animation: fadeInUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
 }
 
 .pre-hub-page {
@@ -600,9 +647,10 @@ a {
 
 .pre-hub__media {
   display: flex;
-  align-items: stretch;
+  /* FIX: On évite le stretch qui déforme l'image si le texte est plus long */
+  align-items: flex-start; 
   justify-content: center;
-  align-self: stretch;
+  align-self: start; /* Le conteneur ne doit pas forcément faire toute la hauteur */
 }
 
 .pre-hub__poster {
@@ -1135,10 +1183,18 @@ a {
   display: grid;
   /* Mobile : Image à gauche (80px), contenu à droite */
   grid-template-columns: 80px 1fr;
+  grid-template-areas: "thumb header"; /* Layout par défaut */
   gap: 16px;
   cursor: pointer;
-  transition: transform 150ms ease, box-shadow 150ms ease;
+  transition: grid-template-columns 0.3s ease, transform 150ms ease, box-shadow 150ms ease;
   align-items: start;
+}
+
+.pre-hub__chapter-card.expanded {
+  grid-template-columns: 140px 1fr; /* La colonne de l'image s'élargit aussi */
+  grid-template-areas: 
+    "thumb header"
+    "details details"; /* La description passe en dessous sur toute la largeur */
 }
 
 .pre-hub__chapter-card:hover {
@@ -1147,6 +1203,7 @@ a {
 }
 
 .pre-hub__chapter-thumb {
+  grid-area: thumb;
   width: 100%;
   height: 80px; /* Hauteur fixe pour le mode liste mobile */
   padding-top: 0; /* Reset du ratio desktop */
@@ -1155,6 +1212,43 @@ a {
   background-position: center;
   position: relative;
   overflow: hidden;
+  transition: height 0.3s ease; /* Animation fluide de la hauteur */
+}
+
+/* Indicateur de lecture discret sur mobile */
+@media (max-width: 768px) {
+  .pre-hub__chapter-thumb::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 40%);
+    opacity: 0.8;
+  }
+
+  .pre-hub__chapter-thumb::before {
+    content: '▶';
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    width: 20px;
+    height: 20px;
+    background: rgba(31, 32, 35, 0.6);
+    color: #fefff4;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    z-index: 2;
+    padding-left: 2px; /* Optical center for play icon */
+  }
+}
+
+/* Quand la carte est étendue (cliquée) sur mobile */
+.pre-hub__chapter-card.expanded .pre-hub__chapter-thumb {
+  height: 140px; /* L'image s'agrandit */
 }
 
 /* Overlay play icon for mobile */
@@ -1179,10 +1273,7 @@ a {
 }
 
 .pre-hub__chapter-content {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 80px; /* Centrage vertical du titre si pas de détails */
+  display: contents; /* Permet aux enfants (header, details) de se placer dans la grille parente */
 }
 
 .pre-hub__chapter-title {
@@ -1214,6 +1305,7 @@ a {
 
 /* Détails (Résumé + Bouton) : Cachés par défaut sur mobile, visibles sur PC */
 .pre-hub__chapter-details {
+  grid-area: details;
   display: none;
   flex-direction: column;
   gap: 12px;
@@ -1264,11 +1356,20 @@ a {
 
 /* Conteneur header mobile (Badge + Textes) */
 .pre-hub__chapter-header-mobile {
+  grid-area: header;
+  align-self: center; /* Centrage vertical par rapport à l'image */
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
   width: 100%; /* Assure que le header prend toute la largeur */
+  transition: all 0.3s ease;
+}
+
+/* Quand la carte est étendue, le badge passe au-dessus du titre */
+.pre-hub__chapter-card.expanded .pre-hub__chapter-header-mobile {
+  flex-direction: column-reverse;
+  justify-content: center;
 }
 
 /* Badge Mobile : Style spécifique hors image */
@@ -1405,11 +1506,13 @@ a {
   /* RESTAURATION LAYOUT DESKTOP (Empilé) */
   .pre-hub__chapter-card {
     grid-template-columns: 1fr; /* Stacked */
+    grid-template-areas: none; /* Reset des areas mobile */
     padding: 14px;
     gap: 12px;
   }
 
   .pre-hub__chapter-thumb {
+    grid-area: auto; /* Reset grid area */
     width: 100%;
     height: auto;
     padding-top: 56%; /* 16:9 Aspect Ratio */
@@ -2105,9 +2208,23 @@ a {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
   padding: 32px;
-  margin-bottom: 24px;
+  /* margin-bottom: 24px; Removed to let grid handle gap */
   display: flex;
   flex-direction: column;
+  height: 100%; /* Ensure equal height in grid */
+}
+
+.formats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-top: 48px;
+}
+
+@media (min-width: 768px) {
+  .formats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .creer-format-card__head {
@@ -2536,4 +2653,171 @@ a {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+@media (max-width: 768px) {
+  .pre-hub {
+    padding-top: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .pre-hub__inner {
+    width: 100% !important;
+    gap: 48px;
+  }
+
+  .pre-hub__pane--chapters {
+    padding: 0 24px;
+  }
+
+  .pre-hub__hero-grid {
+    gap: 0;
+    display: block;
+  }
+
+  .pre-hub__media {
+    width: 100%;
+    /* STABILISATION : On remplace les vh instables par un ratio fixe */
+    aspect-ratio: 3/4; 
+    height: auto;
+    position: relative;
+    /* Overlap plus modéré et stable */
+    margin-bottom: -120px;
+    z-index: 0;
+  }
+
+  .pre-hub__poster {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    border-radius: 0;
+    aspect-ratio: auto;
+    box-shadow: none;
+    /* Simplification du masque pour la performance */
+    -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+    background: transparent;
+  }
+
+  .pre-hub__poster img {
+    object-position: center 20%; /* Focus un peu plus haut que le centre */
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+  }
+
+  .pre-hub__hero-text {
+    position: relative;
+    z-index: 1;
+    padding: 0 24px;
+    text-shadow: 0 4px 24px rgba(0,0,0,0.9);
+    margin-top: 0;
+  }
+  
+  .pre-hub__novel-title {
+    font-size: 2.8rem;
+    margin-bottom: 12px;
+  }
+  
+  .pre-hub__lead {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+    order: 3; /* Description après le CTA */
+  }
+
+  .pre-hub__cta {
+    order: 2; /* CTA avant la description */
+    margin-bottom: 24px;
+  }
+
+  .pre-hub__novel-title {
+    order: 1;
+  }
+
+  .pre-hub__hero-text {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .pre-hub__credits-section {
+    order: 4; /* Crédits tout en bas */
+  }
+
+  .pre-hub__chapter-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Espacement léger entre les chapitres */
+  }
+}
+
+.app-header--transparent {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+/* SPLASH SCREEN */
+.splash-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #1f2023;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.5s ease-out, visibility 0.5s;
+}
+
+.splash-screen--hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.splash-logo {
+  width: 120px;
+  height: 120px;
+  animation: logoPulse 2s infinite ease-in-out;
+}
+
+.splash-loader {
+  width: 140px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.splash-bar {
+  width: 100%;
+  height: 100%;
+  background: #ffff80;
+  transform-origin: left;
+  animation: loadProgress 2s ease-out forwards;
+}
+
+@keyframes logoPulse {
+  0% { opacity: 0.8; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.8; transform: scale(0.95); }
+}
+
+@keyframes loadProgress {
+  0% { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
+}
+
+
 

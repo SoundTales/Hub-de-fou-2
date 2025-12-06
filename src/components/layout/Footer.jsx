@@ -22,7 +22,6 @@ export default function Footer() {
             <ul>
               <li><Link to="/">Accueil</Link></li>
               <li><Link to="/hub">Le Hub (Catalogue)</Link></li>
-              <li><Link to="/liseuse">Démo Liseuse</Link></li>
             </ul>
           </div>
           <div className="app-footer__col">

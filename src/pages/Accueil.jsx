@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabase/supabaseClient'
-import { BookOpen, Headphones, Moon, Play, Info, Mail, Check, AlertCircle } from 'lucide-react'
+import { BookOpen, Headphones, Moon, Play, Info } from 'lucide-react'
 
 const FEATURES = [
   {
@@ -22,46 +22,11 @@ const FEATURES = [
 ]
 
 export default function Accueil() {
-  const [email, setEmail] = useState('')
-  const [subscribeStatus, setSubscribeStatus] = useState('idle') // idle, loading, success, error, already_subscribed
-  const [prefAudio, setPrefAudio] = useState(true)
-  const [prefVisual, setPrefVisual] = useState(false)
   const [expandCard1, setExpandCard1] = useState(false)
   const [expandCard2, setExpandCard2] = useState(false)
 
-  const handleSubscribe = async (e) => {
-    e.preventDefault()
-    if (!email) return
-    
-    setSubscribeStatus('loading')
-    
-    try {
-      const { error } = await supabase
-        .from('newsletter_subscribers')
-        .insert([{
-          email,
-          preference_audio: prefAudio,
-          preference_visual: prefVisual
-        }])
-        
-      if (error) {
-        if (error.code === '23505') { // Unique violation code for Postgres
-           setSubscribeStatus('already_subscribed')
-        } else {
-           throw error
-        }
-      } else {
-        setSubscribeStatus('success')
-        setEmail('')
-      }
-    } catch (error) {
-      console.error('Error subscribing:', error)
-      setSubscribeStatus('error')
-    }
-  }
-
   return (
-    <div className="page accueil-page">
+    <div className="page accueil-page page--fade">
       <section className="accueil__hero">
         <div className="accueil__hero-texts">
           <p className="accueil__eyebrow stagger-item delay-1">Original Audio Series</p>
@@ -218,83 +183,6 @@ export default function Accueil() {
             </div>
           </article>
         </div>
-      </section>
-
-      <section className="contact-section" aria-label="Rester connecté·e aux prochains Tales">
-        <article className="contact-card">
-          <div className="contact-header">
-            <p className="accueil__eyebrow">Lecteurs & auditeurs</p>
-            <h3>Être prévenu du prochain Tale</h3>
-            <p>
-              Laissez votre adresse et nous vous avertirons quand le prochain Tale sera prêt dans la Liseuse, avec éventuellement un accès
-              en avant-première et quelques coulisses.
-            </p>
-          </div>
-          <form className="modern-form" onSubmit={handleSubscribe}>
-            <div className="form-group">
-              <label className="form-label">Adresse e-mail</label>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                  <input 
-                    type="email" 
-                    className="form-input" 
-                    name="newsletter-email" 
-                    required 
-                    placeholder="vous@email.com" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={subscribeStatus === 'loading' || subscribeStatus === 'success'}
-                  />
-              </div>
-            </div>
-            
-            {subscribeStatus === 'success' && (
-                <div style={{ color: '#4ade80', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Check size={18} /> Inscription confirmée ! Merci.
-                </div>
-            )}
-            {subscribeStatus === 'already_subscribed' && (
-                <div style={{ color: '#fbbf24', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Info size={18} /> Vous êtes déjà inscrit.
-                </div>
-            )}
-            {subscribeStatus === 'error' && (
-                <div style={{ color: '#f87171', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <AlertCircle size={18} /> Une erreur est survenue. Réessayez plus tard.
-                </div>
-            )}
-
-                        <fieldset className="checkbox-group" style={{ marginTop: "1rem" }}>
-              <legend>Preferences de contenus</legend>
-              <div className="checkbox-item">
-                <input
-                  type="checkbox"
-                  id="newsletter-audio"
-                  name="newsletter-audio"
-                  checked={prefAudio}
-                  onChange={(e) => setPrefAudio(e.target.checked)}
-                />
-                <label htmlFor="newsletter-audio">Ecoutes audio & lectures</label>
-              </div>
-              <div className="checkbox-item">
-                <input
-                  type="checkbox"
-                  id="newsletter-visuel"
-                  name="newsletter-visuel"
-                  checked={prefVisual}
-                  onChange={(e) => setPrefVisual(e.target.checked)}
-                />
-                <label htmlFor="newsletter-visuel">Illustrations & making-of</label>
-              </div>
-            </fieldset>
-            <button 
-                type="submit" 
-                className="form-submit form-submit--ghost"
-                disabled={subscribeStatus === 'loading' || subscribeStatus === 'success'}
-            >
-              {subscribeStatus === 'loading' ? 'Inscription...' : 'Me prévenir pour le prochain Tale'}
-            </button>
-          </form>
-        </article>
       </section>
     </div>
   )
