@@ -9,14 +9,32 @@ export default function TaleLanding() {
   const location = useLocation()
   
   // Initialisation avec les données passées par le Link si disponibles
-  const [taleData, setTaleData] = useState(location.state?.tale ? { 
-    ...location.state.tale, 
-    cover: location.state.tale.cover_url,
-    description: location.state.tale.synopsis,
-    credits: location.state.tale.credits || { creative: [], voices: [] },
-    chapters: [] 
-  } : null)
-  const [loading, setLoading] = useState(!location.state?.tale)
+  const [taleData, setTaleData] = useState(() => {
+    const stateTale = location.state?.tale
+    if (!stateTale) return null
+
+    // Nettoyage de l'image : on ignore les liens Wix pour éviter le flash de l'ancienne cover
+    const rawCover = stateTale.cover_image || stateTale.cover_url
+    let finalCover = rawCover
+
+    if (rawCover && rawCover.includes('wixstatic')) {
+      finalCover = null // On force le null pour que le fetch prenne le relais proprement
+    } else if (rawCover && !rawCover.startsWith('http')) {
+      finalCover = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${rawCover.split('/').map(part => encodeURIComponent(part)).join('/')}`
+    }
+
+    return { 
+      ...stateTale, 
+      cover: finalCover,
+      description: stateTale.synopsis,
+      credits: stateTale.credits || { creative: [], voices: [] },
+      chapters: [] 
+    }
+  })
+
+  // Si on a détecté une donnée "sale" (Wix) dans le state, on force le loading pour masquer l'affichage temporaire
+  const hasStaleData = location.state?.tale && (location.state.tale.cover_image || location.state.tale.cover_url || '').includes('wixstatic')
+  const [loading, setLoading] = useState(!location.state?.tale || hasStaleData)
   
   const [showCredits, setShowCredits] = useState(false)
   const [visibleChapters, setVisibleChapters] = useState(5)
@@ -62,9 +80,12 @@ export default function TaleLanding() {
         }
 
         // 3. Structurer les données pour l'affichage
+        const coverSource = tale.cover_image || tale.cover_url;
         const formattedData = {
           ...tale,
-          cover: tale.cover_url, // Mapping pour garder la compatibilité
+          cover: coverSource && !coverSource.startsWith('http') 
+            ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${coverSource.split('/').map(part => encodeURIComponent(part)).join('/')}` 
+            : coverSource,
           description: tale.synopsis, // Mapping
           credits: tale.credits || { creative: [], voices: [] }, // Fallback si vide
           chapters: chapters || []
@@ -259,6 +280,13 @@ export default function TaleLanding() {
               {displayedChapters.map((chapter) => {
                 const isExpanded = expandedChapterId === chapter.id
                 const isLocked = chapter.is_premium && !hasPurchase
+                
+                // Logique d'image de chapitre (Supabase ou Fallback Tale)
+                let chapterImage = chapter.cover_image || cover;
+                if (chapterImage && !chapterImage.startsWith('http')) {
+                   chapterImage = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${chapterImage.split('/').map(part => encodeURIComponent(part)).join('/')}`;
+                }
+
                 return (
                   <article
                     key={chapter.id}
@@ -267,7 +295,7 @@ export default function TaleLanding() {
                   >
                     <div 
                       className="pre-hub__chapter-thumb" 
-                      style={{ backgroundImage: `url('${cover}')` }}
+                      style={{ backgroundImage: `url('${chapterImage}')` }}
                       onClick={(e) => {
                         if (!isDesktop) {
                           e.stopPropagation()

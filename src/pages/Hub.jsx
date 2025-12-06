@@ -81,34 +81,41 @@ export default function Hub() {
           <div style={{ minHeight: '400px', opacity: 0 }}></div>
         ) : (
           <div className="tales-grid">
-            {tales.map((tale) => (
-              <Link 
-                to={`/tale/${tale.slug}`} 
-                state={{ tale }} // On passe les données déjà chargées
-                key={tale.id} 
-                className="tale-card-link"
-                onMouseEnter={() => {
-                  // Préchargement des données du Tale au survol
-                  supabase
-                    .from('tales')
-                    .select('*')
-                    .eq('slug', tale.slug)
-                    .single()
-                    .then(() => console.log('Tale data preloaded'));
-                }}
-              >
-                <div className="tale-card">
-                  <div className="tale-card__image">
-                    <img 
-                      src={tale.cover_url} 
-                      alt={tale.title} 
-                      loading="eager"
-                      onError={(e) => {e.target.src = 'https://placehold.co/600x900/1a1a1a/ffffff?text=No+Cover'}}
-                    />
+            {tales.map((tale) => {
+              const coverSource = tale.cover_image || tale.cover_url;
+              const finalCoverUrl = coverSource && !coverSource.startsWith('http') 
+                ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${coverSource.split('/').map(part => encodeURIComponent(part)).join('/')}` 
+                : coverSource;
+
+              return (
+                <Link 
+                  to={`/tale/${tale.slug}`} 
+                  state={{ tale }} // On passe les données déjà chargées
+                  key={tale.id} 
+                  className="tale-card-link"
+                  onMouseEnter={() => {
+                    // Préchargement des données du Tale au survol
+                    supabase
+                      .from('tales')
+                      .select('*')
+                      .eq('slug', tale.slug)
+                      .single()
+                      .then(() => console.log('Tale data preloaded'));
+                  }}
+                >
+                  <div className="tale-card">
+                    <div className="tale-card__image">
+                      <img 
+                        src={finalCoverUrl} 
+                        alt={tale.title} 
+                        loading="eager"
+                        onError={(e) => {e.target.src = 'https://placehold.co/600x900/1a1a1a/ffffff?text=No+Cover'}}
+                      />
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
             {tales.length === 0 && (
               <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '40px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px' }}>
                 <p>Aucune histoire publiée pour le moment.</p>

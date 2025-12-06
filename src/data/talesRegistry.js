@@ -3,8 +3,8 @@ export const talesRegistry = [
     id: "osrase_malone_zadig",
     title: "Osrase : Malone & Zadig",
     subtitle: "The Last Horizon",
-    // L'image est maintenant chargée depuis Wix
-    cover: "https://static.wixstatic.com/media/b9ad46_9fcfea21c381472e97a9a9bc10386509~mv2.jpg", 
+    // L'image est chargée depuis Supabase en production
+    cover: "tale-content/Image test.jpg", 
     description: "Dans un futur où le silence est devenu la ressource la plus précieuse, une archiviste découvre un enregistrement qui pourrait changer l'histoire de l'humanité. Une épopée sonore immersive.",
     
     credits: {
@@ -40,9 +40,9 @@ export const talesRegistry = [
         id: "23", 
         title: "Chapitre 23 · Être libre", 
         summary: "Le dénouement approche. Zora doit faire un choix.", 
-        // J'utilise la même image Wix pour la couverture du chapitre (tu pourras en mettre une autre spécifique plus tard)
-        cover: "https://static.wixstatic.com/media/b9ad46_9fcfea21c381472e97a9a9bc10386509~mv2.jpg",
-        jsonUrl: "https://b9ad46aa-02e5-47d9-af20-605a8f1641a2.usrfiles.com/ugd/b9ad46_d6a3b92e25014d75a19337bfe796d43d.json"
+        // Image placeholder pour le dev local
+        cover: "tale-content/Image test.jpg",
+        jsonUrl: null
       }
     ]
   }
