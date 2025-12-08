@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../supabase/AuthContext';
 
 const LoginModal = ({ isOpen, onClose }) => {
@@ -6,6 +6,17 @@ const LoginModal = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const { signInWithEmail, signInWithOAuth } = useAuth();
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

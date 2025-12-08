@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
+import logo from '../../assets/logo.svg'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
-  const logoSrc = `${import.meta.env.BASE_URL}logo.svg`
+  const logoSrc = logo
 
   return (
     <footer className="app-footer">
@@ -34,9 +35,9 @@ export default function Footer() {
           <div className="app-footer__col">
             <h4>Légal</h4>
             <ul>
-              <li><a href="#">Mentions légales</a></li>
-              <li><a href="#">Confidentialité</a></li>
-              <li><a href="#">CGU</a></li>
+              <li><Link to="/mentions-legales">Mentions légales</Link></li>
+              <li><Link to="/confidentialite">Confidentialité</Link></li>
+              <li><Link to="/cgu">CGU</Link></li>
             </ul>
           </div>
         </nav>

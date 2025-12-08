@@ -24,6 +24,7 @@ const FEATURES = [
 export default function Accueil() {
   const [expandCard1, setExpandCard1] = useState(false)
   const [expandCard2, setExpandCard2] = useState(false)
+  const [expandHeroCard, setExpandHeroCard] = useState(false)
 
   return (
     <div className="page accueil-page page--fade">
@@ -72,15 +73,25 @@ export default function Accueil() {
               Un studio d’histoires<br />
               Une plateforme de création
             </h2>
-            <p className="accueil__hero-card__text">
-              Sound Tales, c’est la rencontre d’un auteur et d’un compositeur qui ont choisi de fabriquer des histoires autrement. Notre premier Tale, « Le Prix de la haine », a été entièrement imaginé, créé, produit, édité et diffusé par nos soins, de la première lettre à la dernière note.
-            </p>
-            <p className="accueil__hero-card__text">
-              Notre métier : accueillir des histoires et leur donner une forme immersive, aux côtés des artistes qui les écrivent, les jouent, les composent et les illustrent. Tale après Tale, ce sont de nouvelles voix, de nouveaux univers et de nouveaux talents qui prennent vie.
-            </p>
-            <p className="accueil__hero-card__text" style={{ marginBottom: 0, fontWeight: 700, color: '#ffff80' }}>
-              En découvrant un Tale, vous ne faites pas que lire et écouter une histoire : vous participez à la création des prochaines.
-            </p>
+
+            <button 
+              className="accueil__hero-card__toggle-btn"
+              onClick={() => setExpandHeroCard(!expandHeroCard)}
+            >
+              {expandHeroCard ? 'Réduire' : 'Lire le contexte'}
+            </button>
+
+            <div className={`accueil__hero-card__content accueil__hero-card__hidden-content ${expandHeroCard ? 'expanded' : ''}`}>
+              <p className="accueil__hero-card__text">
+                Sound Tales, c’est la rencontre d’un auteur et d’un compositeur qui ont choisi de fabriquer des histoires autrement. Notre premier Tale, « Le Prix de la haine », a été entièrement imaginé, créé, produit, édité et diffusé par nos soins, de la première lettre à la dernière note.
+              </p>
+              <p className="accueil__hero-card__text">
+                Notre métier : accueillir des histoires et leur donner une forme immersive, aux côtés des artistes qui les écrivent, les jouent, les composent et les illustrent. Tale après Tale, ce sont de nouvelles voix, de nouveaux univers et de nouveaux talents qui prennent vie.
+              </p>
+              <p className="accueil__hero-card__text" style={{ marginBottom: 0, fontWeight: 700, color: '#ffff80' }}>
+                En découvrant un Tale, vous ne faites pas que lire et écouter une histoire : vous participez à la création des prochaines.
+              </p>
+            </div>
           </div>
         </div>
       </section>

@@ -127,13 +127,15 @@ a {
   bottom: 0;
   background: rgba(35, 35, 42, 0.98);
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   z-index: 850;
   padding: 90px 24px 24px;
   display: flex;
   flex-direction: column;
   transform: translateY(-100%);
-  /* AMÉLIORATION : Courbe de bézier plus naturelle pour l'ouverture du menu */
-  transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.5s;
+  /* Optimisation pour éviter les saccades */
+  will-change: transform;
+  transition: transform 0.4s ease-in-out, visibility 0.4s;
   visibility: hidden;
 }
 
@@ -262,6 +264,7 @@ a {
   /* FIX: Flex container pour que la page enfant remplisse toute la hauteur */
   display: flex;
   flex-direction: column;
+  overflow-x: hidden; /* Sécurité pour éviter le scroll horizontal */
 }
 
 .mobile-bottom-bar {
@@ -1182,7 +1185,7 @@ a {
   box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
   display: grid;
   /* Mobile : Image à gauche (80px), contenu à droite */
-  grid-template-columns: 80px 1fr;
+  grid-template-columns: 80px minmax(0, 1fr);
   grid-template-areas: "thumb header"; /* Layout par défaut */
   gap: 16px;
   cursor: pointer;
@@ -1191,7 +1194,7 @@ a {
 }
 
 .pre-hub__chapter-card.expanded {
-  grid-template-columns: 140px 1fr; /* La colonne de l'image s'élargit aussi */
+  grid-template-columns: 140px minmax(0, 1fr); /* La colonne de l'image s'élargit aussi */
   grid-template-areas: 
     "thumb header"
     "details details"; /* La description passe en dessous sur toute la largeur */
@@ -1590,11 +1593,12 @@ a {
 .accueil__hero {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 40px 24px 60px; /* Ajustement mobile */
+  padding: 32px 16px 40px; /* Ajustement mobile plus serré */
   display: grid;
   grid-template-columns: 1fr;
-  gap: 48px;
+  gap: 32px;
   align-items: center;
+  width: 100%;
 }
 
 @media (min-width: 992px) {
@@ -1609,6 +1613,8 @@ a {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0; /* CRITIQUE : Empêche le dépassement grid */
+  width: 100%;
 }
 
 .accueil__eyebrow {
@@ -1622,11 +1628,14 @@ a {
 
 .accueil__title {
   font-family: 'Playfair Display', serif;
-  font-size: clamp(2.2rem, 4.5vw, 3.6rem);
+  font-size: clamp(1.5rem, 5vw, 3.6rem);
   line-height: 1.1;
   margin: 0;
   display: flex;
   flex-direction: column;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .accueil__lede {
@@ -1715,6 +1724,8 @@ a {
 /* HERO CARD (Visuel droite) */
 .accueil__hero-visual {
   position: relative;
+  min-width: 0; /* CRITIQUE : Empêche le dépassement grid */
+  width: 100%;
 }
 
 .accueil__hero-card {
@@ -1724,6 +1735,13 @@ a {
   padding: 32px;
   backdrop-filter: blur(10px);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .accueil__hero-card {
+    padding: 20px;
+  }
 }
 
 .accueil__hero-card__title {
@@ -1731,6 +1749,8 @@ a {
   font-size: 1.5rem;
   margin: 0 0 16px;
   color: #ffff80;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .accueil__hero-card__text {
@@ -1766,17 +1786,54 @@ a {
   line-height: 1;
 }
 
+/* LOGIQUE DÉPLIANT MOBILE HERO CARD */
+.accueil__hero-card__toggle-btn {
+  display: none; /* Caché sur desktop */
+  margin-top: 16px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fefff4;
+  padding: 12px 24px;
+  border-radius: 99px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+
+.accueil__hero-card__toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 991px) {
+  .accueil__hero-card__toggle-btn {
+    display: block;
+  }
+
+  .accueil__hero-card__hidden-content {
+    display: none;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    animation: fadeIn 0.4s ease;
+  }
+
+  .accueil__hero-card__hidden-content.expanded {
+    display: block;
+  }
+}
+
 /* PREMIUM SECTION (NOUVEAU) */
 .premium-section {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 60px 24px; /* Espacement standardisé mobile */
+  padding: 40px 24px; /* Espacement standardisé mobile */
 }
 
 .premium-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 40px;
+  gap: 24px;
 }
 
 @media (min-width: 992px) {
@@ -1935,7 +1992,7 @@ a {
 .accueil__features-section {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 60px 24px; /* Espacement standardisé mobile */
+  padding: 40px 24px; /* Espacement standardisé mobile */
 }
 
 @media (min-width: 992px) {
@@ -1961,6 +2018,7 @@ a {
     margin-left: -24px; /* Déborde sur les marges du parent */
     margin-right: -24px;
     padding: 0 24px 24px; /* Padding pour le scroll et l'ombre */
+    width: calc(100% + 48px);
     -webkit-overflow-scrolling: touch;
     /* Masquer la scrollbar */
     scrollbar-width: none; 
@@ -2016,7 +2074,7 @@ a {
 .contact-section {
   max-width: 800px;
   margin: 0 auto;
-  padding: 60px 24px 100px; /* Ajout padding top pour l'équilibre */
+  padding: 40px 24px 60px; /* Ajout padding top pour l'équilibre */
 }
 
 @media (min-width: 992px) {
@@ -2364,8 +2422,33 @@ a {
   }
   
   .accueil__stats {
-    flex-direction: column;
-    gap: 24px;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 16px;
+    padding-bottom: 12px; /* Espace pour scrollbar éventuelle */
+    /* Full bleed symmetrical */
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+    width: calc(100% + 40px);
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    /* Masquer la scrollbar pour un look plus clean (optionnel) */
+    scrollbar-width: none; 
+  }
+  
+  .accueil__stats::-webkit-scrollbar {
+    display: none;
+  }
+
+  .accueil__stat {
+    min-width: 85%; /* Prend presque toute la largeur */
+    scroll-snap-align: start;
+    background: rgba(255, 255, 255, 0.05); /* Légère mise en valeur */
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
   
   .contact-card {
@@ -2510,6 +2593,33 @@ a {
   position: relative;
   box-shadow: 0 10px 25px rgba(0,0,0,0.1);
   animation: slideUp 0.3s ease;
+  /* Ajout pour le support mobile paysage */
+  max-height: 90vh;
+  overflow-y: auto;
+  /* Scrollbar plus fine pour le modal */
+  scrollbar-width: thin;
+}
+
+/* Optimisation pour les écrans à faible hauteur (mobile paysage) */
+@media (max-height: 600px) {
+  .modal-content {
+    padding: 1.5rem;
+    margin: 1rem 0;
+  }
+  
+  .modal-content h2 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .modal-content p {
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+  
+  .auth-divider {
+    margin: 1rem 0;
+  }
 }
 
 .modal-close {

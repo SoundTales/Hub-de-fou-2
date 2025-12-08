@@ -4,6 +4,7 @@ import Footer from './Footer.jsx'
 import { supabase } from "../../supabase/supabaseClient";
 import { useAuth } from '../../supabase/AuthContext.jsx'
 import LoginModal from '../auth/LoginModal'
+import logo from '../../assets/logo.svg'
 
 const navClass = ({ isActive }) => (isActive ? 'nav-link nav-link--active' : 'nav-link')
 
@@ -14,7 +15,7 @@ export default function MainLayout() {
   const [isFavorite, setIsFavorite] = useState(false)
   const [authMessage, setAuthMessage] = useState('')
   const [showLoginModal, setShowLoginModal] = useState(false)
-  const logoSrc = `${import.meta.env.BASE_URL}logo.svg`
+  const logoSrc = logo
   const location = useLocation()
   const navigate = useNavigate()
   const { user, loading: authLoading, signInWithEmail, signOut } = useAuth()
@@ -101,6 +102,14 @@ export default function MainLayout() {
     setShowLoginModal(true)
   }
 
+  const handleLogoClick = (e) => {
+    closeMobileMenu()
+    if (location.pathname === '/') {
+      e.preventDefault()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
   // On affiche la barre du bas uniquement sur le Hub pour l'instant
   const shouldShowBottomBar = location.pathname.startsWith('/hub')
   const isTaleLanding = location.pathname.startsWith('/tale/')
@@ -109,10 +118,10 @@ export default function MainLayout() {
   const NavLinks = () => (
     <>
       <NavLink to="/" end className={navClass} onClick={closeMobileMenu}>
-        Accueil
+        Un Tale, c'est quoi ?
       </NavLink>
       <NavLink to="/hub" className={navClass} onClick={closeMobileMenu}>
-        Hub
+        Catalogue
       </NavLink>
       <NavLink to="/creer-tale" className={navClass} onClick={closeMobileMenu}>
         Créer un Tale
@@ -139,7 +148,7 @@ export default function MainLayout() {
           <span />
         </button>
         
-        <NavLink to="/" className="app-logo" aria-label="Retour à l'accueil" onClick={closeMobileMenu}>
+        <NavLink to="/" className="app-logo" aria-label="Retour à l'accueil" onClick={handleLogoClick}>
           <img src={logoSrc} alt="" loading="lazy" />
         </NavLink>
 

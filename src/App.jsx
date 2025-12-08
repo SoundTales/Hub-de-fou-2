@@ -9,6 +9,7 @@ const Hub = lazy(() => import('./pages/Hub'));
 const TaleLanding = lazy(() => import('./pages/TaleLanding'));
 const Liseuse = lazy(() => import('./pages/Liseuse'));
 const CreerTale = lazy(() => import('./pages/CreerTale'));
+const Legal = lazy(() => import('./pages/Legal'));
 
 function App() {
   // Initialisation paresseuse pour éviter le flash au rafraîchissement
@@ -37,6 +38,11 @@ function App() {
           
           {/* Nouvelle route pour la page de présentation du Tale (Ton ancien Hub) */}
           <Route path="/tale/:taleId" element={<TaleLanding />} />
+
+          {/* Pages Légales */}
+          <Route path="/mentions-legales" element={<Legal type="mentions-legales" />} />
+          <Route path="/confidentialite" element={<Legal type="confidentialite" />} />
+          <Route path="/cgu" element={<Legal type="cgu" />} />
         </Route>
         
         {/* La liseuse reste en dehors du layout principal si tu veux le plein écran */}

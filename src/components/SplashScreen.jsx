@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import logo from '../assets/logo.svg';
 
 export default function SplashScreen({ onComplete }) {
   const [isFading, setIsFading] = useState(false);
@@ -30,7 +31,7 @@ export default function SplashScreen({ onComplete }) {
   return (
     <div className={`splash-screen ${isFading ? 'splash-screen--hidden' : ''}`}>
       <div className="splash-content">
-        <img src="/logo.svg" alt="Sound Tales" className="splash-logo" />
+        <img src={logo} alt="Sound Tales" className="splash-logo" />
         <div className="splash-loader">
           <div className="splash-bar"></div>
         </div>
