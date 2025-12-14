@@ -6,7 +6,7 @@ export default function SplashScreen({ onComplete }) {
 
   useEffect(() => {
     // Bloquer le scroll pendant le splash screen
-    document.body.style.overflow = 'hidden';
+    document.body.classList.add('no-scroll');
 
     // Durée de l'écran de démarrage (ex: 2 secondes)
     const timer = setTimeout(() => {
@@ -15,14 +15,14 @@ export default function SplashScreen({ onComplete }) {
 
     // Attendre la fin de l'animation de fade-out avant de démonter
     const cleanup = setTimeout(() => {
-      document.body.style.overflow = ''; // Rétablir le scroll
+      document.body.classList.remove('no-scroll'); // Rétablir le scroll
       onComplete();
     }, 2500); // 2000ms + 500ms de transition
 
     return () => {
       clearTimeout(timer);
       clearTimeout(cleanup);
-      document.body.style.overflow = ''; // Sécurité en cas de démontage forcé
+      document.body.classList.remove('no-scroll'); // Sécurité
     };
   }, [onComplete]);
 

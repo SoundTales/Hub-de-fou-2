@@ -7,13 +7,24 @@
     <title>Sound Tales</title>
     <style>
       html, body { margin: 0; padding: 0; background-color: #1f2023; color: #fefff4; }
+      /* Masque sombre global tant que l'app n'est pas prête (couvre tout le viewport, même sans CSS) */
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: #1f2023;
+        z-index: 2147483647;
+        pointer-events: none;
+      }
+      /* Retiré automatiquement dès que React monte le vrai splash (voir main.jsx / CSS) */
+      .app-ready body::before { display: none; }
     </style>
-    <script type="module" crossorigin src="./assets/index-DHEotZcm.js"></script>
+    <script type="module" crossorigin src="./assets/index-DHGFovfL.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/vendor-WYr585uA.js">
     <link rel="modulepreload" crossorigin href="./assets/supabase-B76hXWPk.js">
-    <link rel="stylesheet" crossorigin href="./assets/index-CmS62w4y.css">
+    <link rel="stylesheet" crossorigin href="./assets/index-aRZGG4qF.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root" style="min-height:100vh;"></div>
   </body>
 </html>

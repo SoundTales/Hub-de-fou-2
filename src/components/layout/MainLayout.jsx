@@ -23,12 +23,12 @@ export default function MainLayout() {
   // Bloque le scroll de fond quand le menu mobile est ouvert pour éviter les doubles scrollbars
   useEffect(() => {
     if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden'
+      document.body.classList.add('no-scroll')
     } else {
-      document.body.style.overflow = ''
+      document.body.classList.remove('no-scroll')
     }
     return () => {
-      document.body.style.overflow = ''
+      document.body.classList.remove('no-scroll')
     }
   }, [mobileMenuOpen])
 

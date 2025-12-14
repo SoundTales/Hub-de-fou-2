@@ -6,7 +6,18 @@ import { Check, Info, AlertCircle } from 'lucide-react';
 // Fonction de préchargement du composant TaleLanding
 const preloadTaleLanding = () => import('./TaleLanding');
 
+// Safe hook with fallback
+const useToastSafe = () => {
+  try {
+    const { useToast } = require('../contexts/ToastContext');
+    return useToast();
+  } catch (e) {
+    return { error: () => {}, success: () => {}, info: () => {} };
+  }
+};
+
 export default function Hub() {
+  const { error: toastError, success: toastSuccess } = useToastSafe();
   const [tales, setTales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,7 +43,8 @@ export default function Hub() {
         setTales(data || []);
       } catch (error) {
         console.error('Error fetching tales:', error);
-        setError("Impossible de charger les Tales pour le moment. Merci de réessayer ultérieurement.")
+        const msg = "Impossible de charger les Tales pour le moment. Merci de réessayer ultérieurement."
+        setError(msg)
       } finally {
         setLoading(false);
       }

@@ -5,22 +5,20 @@ import { supabase } from '../supabase/supabaseClient'
 import { useAuth } from '../supabase/AuthContext.jsx'
 
 export default function TaleLanding() {
-  const { taleId } = useParams() // On récupère le SLUG depuis l'URL
+  const { taleId } = useParams()
   const location = useLocation()
   const [error, setError] = useState(null)
   const [chapterNotice, setChapterNotice] = useState(null)
   
-  // Initialisation avec les données passées par le Link si disponibles
   const [taleData, setTaleData] = useState(() => {
     const stateTale = location.state?.tale
     if (!stateTale) return null
 
-    // Nettoyage de l'image : on ignore les liens Wix pour éviter le flash de l'ancienne cover
     const rawCover = stateTale.cover_image || stateTale.cover_url
     let finalCover = rawCover
 
     if (rawCover && rawCover.includes('wixstatic')) {
-      finalCover = null // On force le null pour que le fetch prenne le relais proprement
+      finalCover = null
     } else if (rawCover && !rawCover.startsWith('http')) {
       finalCover = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${rawCover.split('/').map(part => encodeURIComponent(part)).join('/')}`
     }
@@ -34,7 +32,6 @@ export default function TaleLanding() {
     }
   })
 
-  // Si on a détecté une donnée "sale" (Wix) dans le state, on force le loading pour masquer l'affichage temporaire
   const hasStaleData = location.state?.tale && (location.state.tale.cover_image || location.state.tale.cover_url || '').includes('wixstatic')
   const [loading, setLoading] = useState(!location.state?.tale || hasStaleData)
   
@@ -48,7 +45,6 @@ export default function TaleLanding() {
   
   const navigate = useNavigate()
 
-  // Chargement des données du Tale depuis Supabase
   useEffect(() => {
     if (!taleId) {
       setLoading(false)
@@ -58,7 +54,6 @@ export default function TaleLanding() {
     async function fetchTaleData() {
       try {
         setError(null)
-        // 1. Récupérer le Tale via son slug
         const { data: tale, error: taleError } = await supabase
           .from('tales')
           .select('*')
@@ -67,11 +62,11 @@ export default function TaleLanding() {
 
         if (taleError || !tale) {
           console.error('Tale not found:', taleError)
-          setError("Impossible de trouver ce Tale ou il n'est pas disponible.")
+          const msg = "Impossible de trouver ce Tale ou il n'est pas disponible."
+          setError(msg)
           return
         }
 
-        // 2. Récupérer les chapitres associés
         const { data: chapters, error: chaptersError } = await supabase
           .from('chapters')
           .select('*')
@@ -80,18 +75,18 @@ export default function TaleLanding() {
 
         if (chaptersError) {
           console.error('Error fetching chapters:', chaptersError)
-          setError("Les chapitres de ce Tale sont indisponibles pour le moment.")
+          const msg = "Les chapitres de ce Tale sont indisponibles pour le moment."
+          setError(msg)
         }
 
-        // 3. Structurer les données pour l'affichage
         const coverSource = tale.cover_image || tale.cover_url;
         const formattedData = {
           ...tale,
           cover: coverSource && !coverSource.startsWith('http') 
             ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${coverSource.split('/').map(part => encodeURIComponent(part)).join('/')}` 
             : coverSource,
-          description: tale.synopsis, // Mapping
-          credits: tale.credits || { creative: [], voices: [] }, // Fallback si vide
+          description: tale.synopsis,
+          credits: tale.credits || { creative: [], voices: [] },
           chapters: chapters || []
         }
 
@@ -100,7 +95,8 @@ export default function TaleLanding() {
 
       } catch (error) {
         console.error('Error in fetchTaleData:', error)
-        setError("Impossible de charger ce Tale pour le moment.")
+        const msg = "Impossible de charger ce Tale pour le moment."
+        setError(msg)
       } finally {
         setLoading(false)
       }
@@ -109,7 +105,6 @@ export default function TaleLanding() {
     fetchTaleData()
   }, [taleId, navigate])
 
-  // Vérifie si l'utilisateur a acheté le Tale (déverrouille les chapitres premium)
   useEffect(() => {
     async function checkPurchase() {
       if (!taleData?.id || !user) {
@@ -135,7 +130,6 @@ export default function TaleLanding() {
     checkPurchase()
   }, [taleData?.id, user])
 
-  // Gestion Resize
   useEffect(() => {
     const handleResize = () => {
       const desktop = window.innerWidth > 768
@@ -147,7 +141,6 @@ export default function TaleLanding() {
     return () => window.removeEventListener('resize', handleResize)
   }, [taleData])
 
-  // Gestion Touche Echap pour crédits
   useEffect(() => {
     if (!showCredits) return
     const handleKeyDown = (e) => { if (e.key === 'Escape') setShowCredits(false) }
@@ -155,14 +148,13 @@ export default function TaleLanding() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [showCredits])
 
-  // Bloque le scroll de fond quand l'overlay crédits est ouvert pour éviter une double barre de scroll
   useEffect(() => {
     if (showCredits) {
-      document.body.style.overflow = 'hidden'
+      document.body.classList.add('no-scroll')
     } else {
-      document.body.style.overflow = ''
+      document.body.classList.remove('no-scroll')
     }
-    return () => { document.body.style.overflow = '' }
+    return () => { document.body.classList.remove('no-scroll') }
   }, [showCredits])
 
   if (loading) return <div className="page pre-hub-page" style={{display:'flex', justifyContent:'center', alignItems:'center'}}>Chargement du Tale...</div>
@@ -173,16 +165,16 @@ export default function TaleLanding() {
     </div>
   )
 
-  // Raccourcis pour le rendu
   const { title, subtitle, description, cover, credits, chapters } = taleData
   const displayedChapters = isDesktop ? chapters : chapters.slice(0, visibleChapters)
 
   const handleChapterClick = (chapter, forcePlay = false) => {
     const locked = chapter.is_premium && !hasPurchase
     if (locked) {
-      setChapterNotice(!user
+      const msg = !user
         ? 'Connexion requise pour accéder aux chapitres premium.'
-        : 'Achetez ce Tale pour accéder aux chapitres premium.')
+        : 'Achetez ce Tale pour accéder aux chapitres premium.'
+      setChapterNotice(msg)
       return
     }
     setChapterNotice(null)
@@ -226,7 +218,6 @@ export default function TaleLanding() {
             </div>
           )}
 
-          {/* --- HERO SECTION --- */}
           <div className="pre-hub__hero">
             <div className="pre-hub__hero-grid">
               <div className="pre-hub__media">
@@ -244,7 +235,6 @@ export default function TaleLanding() {
                 <h1 className="pre-hub__novel-title stagger-item delay-2">{title}</h1>
                 <p className="pre-hub__lead stagger-item delay-3">{description}</p>
                 
-                {/* Bouton Lecture Chapitre 1 par défaut */}
                 {chapters.length > 0 && (
                   <Link 
                     to={`/lecture/${taleId}/${chapters[0].id}`} 
@@ -255,7 +245,6 @@ export default function TaleLanding() {
                   </Link>
                 )}
 
-                {/* --- CRÉDITS --- */}
                 <div className="pre-hub__credits-section stagger-item delay-4">
                   {isDesktop ? (
                     <div className="pre-hub__credits-grid-desktop">
@@ -324,14 +313,12 @@ export default function TaleLanding() {
             </div>
           )}
 
-          {/* --- LISTE DES CHAPITRES --- */}
           <section className="pre-hub__pane pre-hub__pane--chapters">
             <div className="pre-hub__chapter-list">
               {displayedChapters.map((chapter) => {
                 const isExpanded = expandedChapterId === chapter.id
                 const isLocked = chapter.is_premium && !hasPurchase
                 
-                // Logique d'image de chapitre (Supabase ou Fallback Tale)
                 let chapterImage = chapter.cover_image || cover;
                 if (chapterImage && !chapterImage.startsWith('http')) {
                    chapterImage = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${chapterImage.split('/').map(part => encodeURIComponent(part)).join('/')}`;
@@ -389,7 +376,6 @@ export default function TaleLanding() {
         </div>
       </div>
 
-      {/* --- OVERLAY CRÉDITS --- */}
       {showCredits && createPortal(
         <div className="credits-overlay" onClick={closeCredits}>
           <div className="credits-overlay__panel" onClick={(e) => e.stopPropagation()}>

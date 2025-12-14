@@ -6,11 +6,6 @@
   background-color: #f5f5f0;
 }
 
-html, body {
-  min-height: 100vh;
-  overflow-y: auto;
-}
-
 * {
   box-sizing: border-box;
 }
@@ -31,10 +26,12 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background: #f5f5f0;
+  /* Fond sombre par défaut pour éviter tout flash clair avant le splash */
+  background: #1f2023;
   font-family: 'Lato', 'Playfair Display', 'Georgia', serif;
   /* EMPÊCHER LE SCROLL HORIZONTAL (BARRE BLANCHE) */
   overflow-x: hidden;
+  overflow-y: auto;
   width: 100%;
   -webkit-font-smoothing: antialiased;
   /* Même réservation pour le body pour plus de stabilité */
@@ -51,7 +48,6 @@ body.no-scroll {
   /* Assure que le root ne dépasse pas */
   width: 100%;
   overflow-x: hidden;
-  overflow-y: visible;
 }
 
 a {
@@ -66,7 +62,6 @@ a {
   width: 100%;
   position: relative;
   overflow-x: hidden;
-  overflow-y: visible;
 }
 
 /* HEADER MODERNE (GLASSMORPHISM) */
@@ -281,8 +276,7 @@ a {
   /* FIX: Flex container pour que la page enfant remplisse toute la hauteur */
   display: flex;
   flex-direction: column;
-  overflow-x: hidden; /* Sécurité pour éviter le scroll horizontal */
-  overflow-y: visible; /* Laisse le scroll principal au body, évite une 2e scrollbar interne */
+  overflow: visible; /* Laisse le scroll principal au body, évite une 2e scrollbar interne */
 }
 
 .mobile-bottom-bar {
