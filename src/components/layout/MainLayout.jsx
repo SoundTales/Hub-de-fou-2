@@ -20,6 +20,18 @@ export default function MainLayout() {
   const navigate = useNavigate()
   const { user, loading: authLoading, signInWithEmail, signOut } = useAuth()
 
+  // Bloque le scroll de fond quand le menu mobile est ouvert pour éviter les doubles scrollbars
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [mobileMenuOpen])
+
   useEffect(() => {
     let lastScrollY = window.scrollY
     let accumulatedDelta = 0

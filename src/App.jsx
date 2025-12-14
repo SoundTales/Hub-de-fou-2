@@ -17,6 +17,12 @@ function App() {
     return !sessionStorage.getItem('hasSeenSplash');
   });
 
+  // Retire le masque de pré-chargement dès que l'app est montée,
+  // même si le splash est déjà désactivé (hasSeenSplash présent).
+  useEffect(() => {
+    document.documentElement.classList.add('app-ready');
+  }, []);
+
   // L'effet n'est plus nécessaire pour l'initialisation, 
   // mais on garde la logique de complétion via le callback
 

@@ -7,6 +7,8 @@ import { useAuth } from '../supabase/AuthContext.jsx'
 export default function TaleLanding() {
   const { taleId } = useParams() // On récupère le SLUG depuis l'URL
   const location = useLocation()
+  const [error, setError] = useState(null)
+  const [chapterNotice, setChapterNotice] = useState(null)
   
   // Initialisation avec les données passées par le Link si disponibles
   const [taleData, setTaleData] = useState(() => {
@@ -55,6 +57,7 @@ export default function TaleLanding() {
 
     async function fetchTaleData() {
       try {
+        setError(null)
         // 1. Récupérer le Tale via son slug
         const { data: tale, error: taleError } = await supabase
           .from('tales')
@@ -64,7 +67,7 @@ export default function TaleLanding() {
 
         if (taleError || !tale) {
           console.error('Tale not found:', taleError)
-          navigate('/hub')
+          setError("Impossible de trouver ce Tale ou il n'est pas disponible.")
           return
         }
 
@@ -77,6 +80,7 @@ export default function TaleLanding() {
 
         if (chaptersError) {
           console.error('Error fetching chapters:', chaptersError)
+          setError("Les chapitres de ce Tale sont indisponibles pour le moment.")
         }
 
         // 3. Structurer les données pour l'affichage
@@ -96,7 +100,7 @@ export default function TaleLanding() {
 
       } catch (error) {
         console.error('Error in fetchTaleData:', error)
-        navigate('/hub')
+        setError("Impossible de charger ce Tale pour le moment.")
       } finally {
         setLoading(false)
       }
@@ -151,8 +155,23 @@ export default function TaleLanding() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [showCredits])
 
+  // Bloque le scroll de fond quand l'overlay crédits est ouvert pour éviter une double barre de scroll
+  useEffect(() => {
+    if (showCredits) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [showCredits])
+
   if (loading) return <div className="page pre-hub-page" style={{display:'flex', justifyContent:'center', alignItems:'center'}}>Chargement du Tale...</div>
-  if (!taleData) return null
+  if (!taleData) return (
+    <div className="page pre-hub-page" style={{ padding: '120px 20px', textAlign: 'center' }}>
+      <p style={{ marginBottom: '16px' }}>{error || "Ce Tale est introuvable ou temporairement indisponible."}</p>
+      <Link to="/hub" className="pre-hub__cta">Retour au catalogue</Link>
+    </div>
+  )
 
   // Raccourcis pour le rendu
   const { title, subtitle, description, cover, credits, chapters } = taleData
@@ -161,13 +180,12 @@ export default function TaleLanding() {
   const handleChapterClick = (chapter, forcePlay = false) => {
     const locked = chapter.is_premium && !hasPurchase
     if (locked) {
-      if (!user) {
-        window.alert('Connexion requise pour accéder aux chapitres premium.')
-      } else {
-        window.alert('Achetez ce Tale pour accéder aux chapitres premium.')
-      }
+      setChapterNotice(!user
+        ? 'Connexion requise pour accéder aux chapitres premium.'
+        : 'Achetez ce Tale pour accéder aux chapitres premium.')
       return
     }
+    setChapterNotice(null)
     if (isDesktop || forcePlay) {
       enterFullscreen()
       navigate(`/lecture/${taleId}/${chapter.id}`)
@@ -192,6 +210,22 @@ export default function TaleLanding() {
       <div className="pre-hub">
         <div className="pre-hub__inner">
           
+          {error && (
+            <div
+              role="alert"
+              style={{
+                background: 'rgba(248,113,113,0.12)',
+                border: '1px solid rgba(248,113,113,0.5)',
+                color: '#fecaca',
+                padding: '12px 16px',
+                borderRadius: '10px',
+                marginBottom: '16px'
+              }}
+            >
+              {error}
+            </div>
+          )}
+
           {/* --- HERO SECTION --- */}
           <div className="pre-hub__hero">
             <div className="pre-hub__hero-grid">
@@ -273,6 +307,22 @@ export default function TaleLanding() {
               </div>
             </div>
           </div>
+
+          {chapterNotice && (
+            <div
+              role="status"
+              style={{
+                background: 'rgba(251,191,36,0.12)',
+                border: '1px solid rgba(251,191,36,0.5)',
+                color: '#facc15',
+                padding: '12px 16px',
+                borderRadius: '10px',
+                margin: '12px 0 0'
+              }}
+            >
+              {chapterNotice}
+            </div>
+          )}
 
           {/* --- LISTE DES CHAPITRES --- */}
           <section className="pre-hub__pane pre-hub__pane--chapters">

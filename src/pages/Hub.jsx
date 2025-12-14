@@ -9,6 +9,7 @@ const preloadTaleLanding = () => import('./TaleLanding');
 export default function Hub() {
   const [tales, setTales] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [email, setEmail] = useState('')
   const [subscribeStatus, setSubscribeStatus] = useState('idle') // idle, loading, success, error, already_subscribed
   const [prefAudio, setPrefAudio] = useState(true)
@@ -20,6 +21,7 @@ export default function Hub() {
 
     async function fetchTales() {
       try {
+        setError(null)
         const { data, error } = await supabase
           .from('tales')
           .select('*')
@@ -30,6 +32,7 @@ export default function Hub() {
         setTales(data || []);
       } catch (error) {
         console.error('Error fetching tales:', error);
+        setError("Impossible de charger les Tales pour le moment. Merci de réessayer ultérieurement.")
       } finally {
         setLoading(false);
       }
@@ -76,6 +79,22 @@ export default function Hub() {
           <p className="accueil__eyebrow">Le Catalogue</p>
           <h2>Toutes nos histoires</h2>
         </div>
+
+        {error && (
+          <div
+            role="alert"
+            style={{
+              background: 'rgba(248,113,113,0.12)',
+              border: '1px solid rgba(248,113,113,0.5)',
+              color: '#fecaca',
+              padding: '12px 16px',
+              borderRadius: '10px',
+              margin: '12px 0 18px'
+            }}
+          >
+            {error}
+          </div>
+        )}
 
         {loading ? (
           <div style={{ minHeight: '400px', opacity: 0 }}></div>
